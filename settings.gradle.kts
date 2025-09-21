@@ -285,7 +285,7 @@ pluginManagement {
                 // @Updated by SuperMonster003 on Apr 23, 2025.
                 agpVersionMap = mapOf(
                     "2025.1" to "8.9.3", /* May 17, 2025. */
-                    "2024.3.1" to "8.7.3", /* Dec 10, 2024. */
+                    "2024.3.1" to "8.9.1", /* Dec 10, 2024. */
                     "2024.3" to "8.7.0-rc01", /* Nov 15, 2024. */
                     "2024.2" to "8.5.2", /* Aug 13, 2024. */
                     "2024.1" to "8.2.2", /* Apr 6, 2024. */
