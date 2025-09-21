@@ -1,6 +1,5 @@
 package org.autojs.autojs.runtime
 
-import com.stardust.autojs.runtime.ScriptRuntime
 import org.autojs.autojs.runtime.api.HealthConnect
 
 /**
@@ -13,7 +12,7 @@ object ScriptRuntimeHelper {
      * 为 ScriptRuntime 添加 HealthConnect API
      */
     @JvmStatic
-    fun addHealthConnect(runtime: ScriptRuntime): HealthConnect {
+    fun addHealthConnect(runtime: org.autojs.autojs.runtime.ScriptRuntime): HealthConnect {
         val context = runtime.uiHandler.context
         return HealthConnect(context, runtime)
     }
