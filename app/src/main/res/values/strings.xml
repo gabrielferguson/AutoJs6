@@ -1284,5 +1284,20 @@
     <string name="text_write_secure_settings">Write security settings</string>
     <string name="text_write_secure_settings_description">Secure system settings, containing system preferences that applications can read but are not allowed to write.\nThese are for preferences that the user must explicitly modify through the UI of a system app.\nWith secure system settings permission, normal applications can directly modify the secure settings (such as accessibility service).</string>
     <string name="text_write_system_settings">Write system settings</string>
+        
+    <!-- Health Connect Permissions Rationale -->
+    <string name="text_health_connect_permissions">Health Connect Permissions</string>
+    <string name="text_health_connect_permissions_title">Health Connect Permissions</string>
+    <string name="text_health_connect_permissions_description">AutoJs6 requests access to your health data through Health Connect to provide health-related automation features. This includes reading and writing health data such as sleep, fitness, and wellness metrics.</string>
+    <string name="text_health_connect_read_permission">Read health data to analyze and use in automation scripts</string>
+    <string name="text_health_connect_write_permission">Write health data to record activities and metrics</string>
+    <string name="text_health_connect_background_permission">Access historical health data for comprehensive analysis</string>
+    <string name="text_health_connect_why_needed">These permissions allow AutoJs6 to create powerful health-related automation scripts that can interact with your fitness data, track progress, and integrate with health monitoring workflows.</string>
+    <string name="text_go_to_health_connect_settings">Go to Health Connect Settings</string>
+    <string name="text_not_now">Not Now</string>
+    <string name="text_health_connect_icon">Health Connect Icon</string>
+    <string name="text_read_permission_icon">Read Permission Icon</string>
+    <string name="text_write_permission_icon">Write Permission Icon</string>
+    <string name="text_background_permission_icon">Background Permission Icon</string>
 
 </resources>
