@@ -7,28 +7,25 @@ import android.util.Log
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.SleepSessionRecord
-import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import kotlinx.coroutines.runBlocking
 import org.autojs.autojs.annotation.ScriptInterface
 import org.autojs.autojs.extension.ArrayExtensions.toNativeArray
 import org.autojs.autojs.extension.ArrayExtensions.toNativeObject
-import org.autojs.autojs.runtime.ScriptRuntime
+import com.stardust.autojs.runtime.ScriptRuntime
 import org.autojs.autojs.util.RhinoUtils.coerceString
 import org.mozilla.javascript.NativeArray
 import org.mozilla.javascript.NativeObject
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
 /**
  * Health Connect API 包装器
  * 为 AutoJs6 脚本提供睡眠数据读写功能
- * 
- * Created for AutoJs6 Health Connect integration
- * Modified by gabrielfergerson on 2025-09-21
  */
 class HealthConnect(private val context: Context, private val scriptRuntime: ScriptRuntime) {
 
@@ -116,7 +113,6 @@ class HealthConnect(private val context: Context, private val scriptRuntime: Scr
             context.startActivity(intent)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to open Health Connect permissions", e)
-            // 回退到通用设置页面
             openHealthConnectSettings()
         }
     }
@@ -140,8 +136,6 @@ class HealthConnect(private val context: Context, private val scriptRuntime: Scr
 
     /**
      * 读取睡眠记录
-     * @param days 获取最近几天的数据，默认为 7 天
-     * @return 睡眠记录数组
      */
     @ScriptInterface
     @JvmOverloads
@@ -181,7 +175,7 @@ class HealthConnect(private val context: Context, private val scriptRuntime: Scr
                     if (record.stages.isNotEmpty()) {
                         val stages = record.stages.map { stage ->
                             mapOf(
-                                "stage" to stage.stage.toString(), // 修复: 使用 toString() 而不是 .name
+                                "stage" to stage.stage.toString(), // 修复：使用 toString() 
                                 "startTime" to formatInstant(stage.startTime),
                                 "endTime" to formatInstant(stage.endTime)
                             ).toNativeObject()
@@ -189,7 +183,6 @@ class HealthConnect(private val context: Context, private val scriptRuntime: Scr
                         sleepRecord["stages"] = stages.toNativeArray()
                     }
 
-                    // 添加睡眠质量相关信息
                     sleepRecord["title"] = record.title ?: ""
                     sleepRecord["notes"] = record.notes ?: ""
 
@@ -207,7 +200,6 @@ class HealthConnect(private val context: Context, private val scriptRuntime: Scr
 
     /**
      * 写入睡眠记录
-     * @param sleepData 睡眠数据对象，包含 startTime, endTime 等信息
      */
     @ScriptInterface
     fun writeSleepRecord(sleepData: Any): Boolean {
@@ -222,7 +214,6 @@ class HealthConnect(private val context: Context, private val scriptRuntime: Scr
         val client = healthConnectClient ?: throw IllegalStateException("Health Connect client not initialized")
 
         return try {
-            // 转换 JavaScript 对象到 Map
             require(sleepData is Map<*, *>) { "Sleep data must be an object with startTime and endTime" }
             val dataMap = sleepData as Map<String, Any?>
 
@@ -236,21 +227,19 @@ class HealthConnect(private val context: Context, private val scriptRuntime: Scr
             val startTime = parseDateTime(startTimeStr)
             val endTime = parseDateTime(endTimeStr)
 
-            // 修复: 使用 == 比较而不是 isEqual
-            if (endTime.isBefore(startTime) || endTime == startTime) {
+            if (endTime.isBefore(startTime) || endTime == startTime) { // 修复：使用 == 
                 throw IllegalArgumentException("endTime must be after startTime")
             }
 
             runBlocking {
-                // 修复: 添加 metadata 参数
+                // 修复：简化 SleepSessionRecord 构造
                 val sleepRecord = SleepSessionRecord(
                     startTime = startTime,
-                    startZoneOffset = null,
+                    startZoneOffset = ZoneOffset.systemDefault().rules.getOffset(startTime),
                     endTime = endTime,
-                    endZoneOffset = null,
+                    endZoneOffset = ZoneOffset.systemDefault().rules.getOffset(endTime),
                     title = coerceString(dataMap["title"] ?: "AutoJs6 Sleep Record"),
-                    notes = coerceString(dataMap["notes"] ?: ""),
-                    metadata = Metadata() // 添加必需的 metadata 参数
+                    notes = coerceString(dataMap["notes"] ?: "")
                 )
 
                 client.insertRecords(listOf(sleepRecord))
@@ -265,7 +254,6 @@ class HealthConnect(private val context: Context, private val scriptRuntime: Scr
 
     /**
      * 删除睡眠记录
-     * @param recordId 记录ID
      */
     @ScriptInterface
     fun deleteSleepRecord(recordId: String): Boolean {
@@ -297,7 +285,6 @@ class HealthConnect(private val context: Context, private val scriptRuntime: Scr
 
     /**
      * 获取睡眠统计信息
-     * @param days 统计最近几天的数据
      */
     @ScriptInterface
     fun getSleepStats(days: Int = 7): NativeObject {
@@ -333,23 +320,15 @@ class HealthConnect(private val context: Context, private val scriptRuntime: Scr
         return stats.toNativeObject()
     }
 
-    /**
-     * 格式化 Instant 到字符串
-     */
     private fun formatInstant(instant: Instant): String {
         return LocalDateTime.ofInstant(instant, ZoneId.systemDefault())
             .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
     }
 
-    /**
-     * 解析日期时间字符串
-     */
     private fun parseDateTime(dateTimeStr: String): Instant {
         return try {
-            // 尝试多种格式
             when {
                 dateTimeStr.contains("T") -> {
-                    // ISO 格式: 2024-01-20T22:30:00
                     if (dateTimeStr.endsWith("Z")) {
                         Instant.parse(dateTimeStr)
                     } else {
@@ -357,12 +336,10 @@ class HealthConnect(private val context: Context, private val scriptRuntime: Scr
                     }
                 }
                 dateTimeStr.matches(Regex("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}")) -> {
-                    // 标准格式: 2024-01-20 22:30:00
                     LocalDateTime.parse(dateTimeStr, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
                         .atZone(ZoneId.systemDefault()).toInstant()
                 }
                 dateTimeStr.matches(Regex("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}")) -> {
-                    // 短格式: 2024-01-20 22:30
                     LocalDateTime.parse("$dateTimeStr:00", DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
                         .atZone(ZoneId.systemDefault()).toInstant()
                 }
