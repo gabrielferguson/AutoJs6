@@ -180,6 +180,12 @@
 
     <uses-permission android:name="com.android.vending.BILLING" />
 
+    <!-- 在后台读取健康数据权限（任何类型） -->
+    <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND" />
+    <!-- 读取以往的健康数据权限（任何类型） -->
+    <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_HISTORY" />
+    <!-- 写入所有健康记录数据权限 -->
+    <uses-permission android:name="android.permission.health.WRITE_MEDICAL_DATA" />
     <uses-permission android:name="android.permission.health.READ_SLEEP"/>
     <uses-permission android:name="android.permission.health.WRITE_SLEEP"/>
 
