@@ -46,6 +46,8 @@ dependencies /* Unclassified */ {
 
     // Add a dependency of Health Connect SDK
     implementation("androidx.health.connect:connect-client:1.2.0-alpha01")
+    // 用于把协程的 suspend API 包装成阻塞/回调
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 
     // Material Components
     implementation("com.google.android.material:material:1.12.0")
