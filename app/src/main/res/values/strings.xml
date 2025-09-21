@@ -1286,27 +1286,10 @@
     <string name="text_write_system_settings">Write system settings</string>
 
     <!-- Health Connect Permissions Rationale -->
-    <string name="text_health_connect_permissions">Health Connect Permissions</string>
-    <string name="text_health_connect_permissions_title">Health Connect Permissions</string>
-    <string name="text_health_connect_permissions_description">AutoJs6 requests access to your health data through Health Connect to provide health-related automation features. This includes reading and writing health data such as sleep, fitness, and wellness metrics.</string>
-    <string name="text_health_connect_not_available_description">Health Connect is not installed on your device. Please install Health Connect from the Google Play Store to use health-related automation features in AutoJs6.</string>
-    <string name="text_health_connect_read_permission">Read health data to analyze and use in automation scripts</string>
-    <string name="text_health_connect_write_permission">Write health data to record activities and metrics</string>
-    <string name="text_health_connect_background_permission">Access historical health data for comprehensive analysis</string>
-    <string name="text_health_connect_why_needed">These permissions allow AutoJs6 to create powerful health-related automation scripts that can interact with your fitness data, track progress, and integrate with health monitoring workflows.</string>
-    <string name="text_go_to_health_connect_settings">Go to Health Connect Settings</string>
-    <string name="text_install_health_connect">Install Health Connect</string>
-    <string name="text_not_now">Not Now</string>
-    <string name="text_health_connect_icon">Health Connect Icon</string>
-    <string name="text_read_permission_icon">Read Permission Icon</string>
-    <string name="text_write_permission_icon">Write Permission Icon</string>
-    <string name="text_background_permission_icon">Background Permission Icon</string>
-    <string name="text_opening_health_connect">Opening Health Connect...</string>
-    <string name="text_opening_health_connect_settings">Opening Health Connect settings...</string>
-    <string name="text_opening_system_settings">Opening system settings...</string>
-    <string name="text_unable_to_open_settings">Unable to open settings</string>
-    <string name="text_opening_play_store">Opening Google Play Store...</string>
-    <string name="text_opening_browser_for_health_connect">Opening browser to install Health Connect...</string>
-    <string name="text_unable_to_install_health_connect">Unable to install Health Connect</string>
+    <string name="health_connect_permissions_rationale_title">Health Connect Permissions</string>
+    <string name="health_connect_permissions_rationale_message">AutoJs6 requests access to Health Connect data to provide automation capabilities for health and fitness tracking.\n\nThis permission allows AutoJs6 to:\n• Read and write sleep data\n• Access health data in the background\n• Read historical health data\n• Write medical data records\n\nYour health data privacy is important. AutoJs6 will only access data when explicitly requested by your scripts and according to your permissions settings.</string>
+    <string name="health_connect_permissions_rationale_open_settings">Open Health Connect Settings</string>
+    <string name="health_connect_permissions_rationale_not_available">Health Connect is not available on this device</string>
+    <string name="health_connect_permissions_rationale_understand">I Understand</string>
 
 </resources>
