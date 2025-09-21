@@ -1055,4 +1055,19 @@
     <string name="text_write_secure_settings_description">安全设置包含应用程序可读但不可写入的设置选项, 这些选项只能由 UI 或系统级别应用修改.\n被授予 \"修改安全设置权限\" 后, 普通应用可直接修改上述安全设置 (例如无障碍服务).</string>
     <string name="text_write_system_settings">修改系统设置</string>
 
+    <!-- Health Connect Permissions Rationale -->
+    <string name="text_health_connect_permissions">Health Connect 权限</string>
+    <string name="text_health_connect_permissions_title">Health Connect 权限</string>
+    <string name="text_health_connect_permissions_description">AutoJs6 请求通过 Health Connect 访问您的健康数据，以提供健康相关的自动化功能。这包括读取和写入健康数据，如睡眠、运动和健康指标。</string>
+    <string name="text_health_connect_read_permission">读取健康数据用于分析并在自动化脚本中使用</string>
+    <string name="text_health_connect_write_permission">写入健康数据以记录活动和指标</string>
+    <string name="text_health_connect_background_permission">访问历史健康数据进行全面分析</string>
+    <string name="text_health_connect_why_needed">这些权限允许 AutoJs6 创建强大的健康相关自动化脚本，可以与您的健身数据交互、跟踪进度并集成到健康监控工作流程中。</string>
+    <string name="text_go_to_health_connect_settings">前往 Health Connect 设置</string>
+    <string name="text_not_now">暂不设置</string>
+    <string name="text_health_connect_icon">Health Connect 图标</string>
+    <string name="text_read_permission_icon">读取权限图标</string>
+    <string name="text_write_permission_icon">写入权限图标</string>
+    <string name="text_background_permission_icon">后台权限图标</string>
+
 </resources>
