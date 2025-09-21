@@ -1,177 +1,191 @@
 package org.autojs.autojs
 
+import android.content.ActivityNotFoundException
+import android.content.ComponentName
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
-import android.provider.Settings
 import android.util.Log
+import android.view.MenuItem
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.Toolbar
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.snackbar.Snackbar
 import org.autojs.autojs.ui.BaseActivity
-import org.autojs.autojs.util.ViewUtils
 import org.autojs.autojs6.R
-import org.autojs.autojs6.databinding.ActivityPermissionsRationaleBinding
 
 /**
  * Activity to show Health Connect permissions rationale.
- * This activity handles the Health Connect permissions explanation and 
- * allows users to navigate to Health Connect settings.
- * 
- * Handles Android Health Connect integration for AutoJs6:
- * - Shows rationale for health data permissions
- * - Provides navigation to Health Connect settings
- * - Handles Health Connect availability detection
- * - Supports both ACTION_SHOW_PERMISSIONS_RATIONALE and VIEW_PERMISSION_USAGE intents
+ * This activity is triggered when users click the privacy policy link in Health Connect.
  * 
  * Created for Health Connect SDK integration.
+ * Modified by AutoJs6 team for permissions explanation.
  */
 class PermissionsRationaleActivity : BaseActivity() {
 
-    private lateinit var binding: ActivityPermissionsRationaleBinding
+    private lateinit var toolbar: Toolbar
+    private lateinit var btnUnderstand: MaterialButton
+    private lateinit var btnOpenSettings: MaterialButton
 
     companion object {
         private const val TAG = "PermissionsRationale"
-        private const val HEALTH_CONNECT_PACKAGE = "com.google.android.apps.healthdata"
-        private const val HEALTH_CONNECT_ACTION = "androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE"
-        private const val VIEW_PERMISSION_USAGE_ACTION = "android.intent.action.VIEW_PERMISSION_USAGE"
+        private const val HEALTH_CONNECT_PACKAGE_NAME = "com.google.android.apps.healthdata"
+        
+        // Health Connect settings activity components
+        private const val HEALTH_CONNECT_SETTINGS_ACTION = "androidx.health.ACTION_MANAGE_HEALTH_PERMISSIONS"
+        private const val HEALTH_CONNECT_COMPONENT = "com.google.android.apps.healthdata/.permission.ui.RequestPermissionActivity"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_permissions_rationale)
         
-        binding = ActivityPermissionsRationaleBinding.inflate(layoutInflater).also {
-            setContentView(it.root)
-            
-            // Set up toolbar
-            it.toolbar.apply {
-                setTitle(R.string.text_health_connect_permissions)
-                setSupportActionBar(this)
-                setNavigationOnClickListener { finish() }
-            }
+        Log.d(TAG, "PermissionsRationaleActivity created")
+        
+        initViews()
+        setupToolbar()
+        setupClickListeners()
+        
+        // Check if Health Connect is available
+        if (!isHealthConnectAvailable()) {
+            showHealthConnectNotAvailable()
         }
-        
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        
-        // Check Health Connect availability and update UI accordingly
-        checkHealthConnectAvailability()
-        
-        setupUI()
-        
-        // Log the intent that launched this activity for debugging
-        Log.d(TAG, "Activity launched with action: ${intent?.action}")
     }
 
-    private fun checkHealthConnectAvailability() {
-        val isHealthConnectAvailable = isHealthConnectAvailable()
-        
-        binding.apply {
-            if (!isHealthConnectAvailable) {
-                // Show a warning that Health Connect is not available
-                textDescription.text = getString(R.string.text_health_connect_not_available_description)
-                buttonGoToSettings.text = getString(R.string.text_install_health_connect)
-            }
-        }
-        
-        Log.d(TAG, "Health Connect available: $isHealthConnectAvailable")
+    private fun initViews() {
+        toolbar = findViewById(R.id.toolbar)
+        btnUnderstand = findViewById(R.id.btn_understand)
+        btnOpenSettings = findViewById(R.id.btn_open_settings)
     }
 
-    private fun setupUI() {
-        binding.apply {
-            // Set up button click listeners
-            buttonGoToSettings.setOnClickListener {
-                if (isHealthConnectAvailable()) {
-                    openHealthConnectSettings()
-                } else {
-                    openHealthConnectInstallPage()
-                }
-            }
-            
-            buttonNotNow.setOnClickListener {
+    private fun setupToolbar() {
+        setSupportActionBar(toolbar)
+        supportActionBar?.apply {
+            setDisplayHomeAsUpEnabled(true)
+            setDisplayShowHomeEnabled(true)
+            title = getString(R.string.health_connect_permissions_rationale_title)
+        }
+    }
+
+    private fun setupClickListeners() {
+        btnUnderstand.setOnClickListener {
+            Log.d(TAG, "User clicked understand button")
+            finish()
+        }
+
+        btnOpenSettings.setOnClickListener {
+            Log.d(TAG, "User clicked open settings button")
+            openHealthConnectSettings()
+        }
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            android.R.id.home -> {
                 finish()
+                true
             }
+            else -> super.onOptionsItemSelected(item)
         }
-    }
-
-    private fun openHealthConnectSettings() {
-        try {
-            // Primary approach: Try to open Health Connect app directly
-            val healthConnectIntent = packageManager.getLaunchIntentForPackage(HEALTH_CONNECT_PACKAGE)
-            if (healthConnectIntent != null) {
-                startActivity(healthConnectIntent)
-                showToast(R.string.text_opening_health_connect)
-                finish()
-                return
-            }
-            
-            // Fallback 1: Try to open Health Connect app settings page
-            val appSettingsIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                data = Uri.fromParts("package", HEALTH_CONNECT_PACKAGE, null)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            startActivity(appSettingsIntent)
-            showToast(R.string.text_opening_health_connect_settings)
-            
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to open Health Connect settings", e)
-            
-            // Fallback 2: Try to open system permissions or general settings
-            try {
-                val fallbackIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    Intent(Settings.ACTION_APP_OPEN_BY_DEFAULT_SETTINGS)
-                } else {
-                    Intent(Settings.ACTION_SETTINGS)
-                }
-                startActivity(fallbackIntent)
-                showToast(R.string.text_opening_system_settings)
-            } catch (fallbackException: Exception) {
-                Log.e(TAG, "Failed to open any settings", fallbackException)
-                showToast(R.string.text_unable_to_open_settings)
-            }
-        }
-        
-        // Close this activity after trying to open settings
-        finish()
-    }
-
-    private fun openHealthConnectInstallPage() {
-        try {
-            // Try to open Google Play Store page for Health Connect
-            val playStoreIntent = Intent(Intent.ACTION_VIEW).apply {
-                data = Uri.parse("market://details?id=$HEALTH_CONNECT_PACKAGE")
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            startActivity(playStoreIntent)
-            showToast(R.string.text_opening_play_store)
-            
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to open Play Store, trying web browser", e)
-            
-            // Fallback: Open web browser with Play Store URL
-            try {
-                val webIntent = Intent(Intent.ACTION_VIEW).apply {
-                    data = Uri.parse("https://play.google.com/store/apps/details?id=$HEALTH_CONNECT_PACKAGE")
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                startActivity(webIntent)
-                showToast(R.string.text_opening_browser_for_health_connect)
-            } catch (webException: Exception) {
-                Log.e(TAG, "Failed to open browser", webException)
-                showToast(R.string.text_unable_to_install_health_connect)
-            }
-        }
-        
-        finish()
     }
 
     private fun isHealthConnectAvailable(): Boolean {
         return try {
-            packageManager.getPackageInfo(HEALTH_CONNECT_PACKAGE, 0)
+            packageManager.getPackageInfo(HEALTH_CONNECT_PACKAGE_NAME, 0)
             true
-        } catch (e: Exception) {
+        } catch (e: PackageManager.NameNotFoundException) {
+            Log.w(TAG, "Health Connect is not installed on this device")
             false
         }
     }
 
-    private fun showToast(messageResId: Int) {
-        ViewUtils.showToast(this, getString(messageResId))
+    private fun showHealthConnectNotAvailable() {
+        val message = getString(R.string.health_connect_permissions_rationale_not_available)
+        Snackbar.make(findViewById(android.R.id.content), message, Snackbar.LENGTH_LONG)
+            .show()
+        
+        // Disable the open settings button
+        btnOpenSettings.isEnabled = false
+        btnOpenSettings.alpha = 0.6f
+    }
+
+    private fun openHealthConnectSettings() {
+        if (!isHealthConnectAvailable()) {
+            showHealthConnectNotAvailable()
+            return
+        }
+
+        try {
+            // Try to open Health Connect permissions directly
+            val intent = Intent().apply {
+                action = HEALTH_CONNECT_SETTINGS_ACTION
+                `package` = HEALTH_CONNECT_PACKAGE_NAME
+            }
+            
+            // Check if the intent can be resolved
+            if (intent.resolveActivity(packageManager) != null) {
+                startActivity(intent)
+                Log.d(TAG, "Opened Health Connect settings with direct action")
+            } else {
+                // Fallback: try to open Health Connect app main activity
+                openHealthConnectApp()
+            }
+        } catch (e: ActivityNotFoundException) {
+            Log.w(TAG, "Failed to open Health Connect settings with direct action", e)
+            openHealthConnectApp()
+        } catch (e: Exception) {
+            Log.e(TAG, "Unexpected error opening Health Connect settings", e)
+            showSettingsError()
+        }
+    }
+
+    private fun openHealthConnectApp() {
+        try {
+            // Try to open the Health Connect app's main activity
+            val intent = packageManager.getLaunchIntentForPackage(HEALTH_CONNECT_PACKAGE_NAME)
+            if (intent != null) {
+                startActivity(intent)
+                Log.d(TAG, "Opened Health Connect app main activity")
+            } else {
+                // Fallback: try to open in Play Store
+                openInPlayStore()
+            }
+        } catch (e: ActivityNotFoundException) {
+            Log.w(TAG, "Failed to open Health Connect app", e)
+            openInPlayStore()
+        } catch (e: Exception) {
+            Log.e(TAG, "Unexpected error opening Health Connect app", e)
+            showSettingsError()
+        }
+    }
+
+    private fun openInPlayStore() {
+        try {
+            val playStoreIntent = Intent(Intent.ACTION_VIEW).apply {
+                data = Uri.parse("market://details?id=$HEALTH_CONNECT_PACKAGE_NAME")
+            }
+            
+            if (playStoreIntent.resolveActivity(packageManager) != null) {
+                startActivity(playStoreIntent)
+                Log.d(TAG, "Opened Health Connect in Play Store")
+            } else {
+                // Fallback to web browser
+                val webIntent = Intent(Intent.ACTION_VIEW).apply {
+                    data = Uri.parse("https://play.google.com/store/apps/details?id=$HEALTH_CONNECT_PACKAGE_NAME")
+                }
+                startActivity(webIntent)
+                Log.d(TAG, "Opened Health Connect in web browser")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to open Health Connect in Play Store", e)
+            showSettingsError()
+        }
+    }
+
+    private fun showSettingsError() {
+        val message = "Unable to open Health Connect settings. Please open Health Connect manually from your app drawer."
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show()
     }
 }
