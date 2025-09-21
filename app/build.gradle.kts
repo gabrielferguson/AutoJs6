@@ -45,7 +45,7 @@ dependencies /* Unclassified */ {
     implementation("androidx.multidex:multidex:2.0.1")
 
     // Add a dependency of Health Connect SDK
-    implementation("androidx.health.connect:connect-client:1.2.0-alpha01")
+    implementation("androidx.health.connect:connect-client:1.1.0-rc03")
     // 用于把协程的 suspend API 包装成阻塞/回调
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 
