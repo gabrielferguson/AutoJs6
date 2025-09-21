@@ -49,18 +49,18 @@ jobs:
           path: app/build/outputs/apk/app/release/*-arm64-v8a.apk
         continue-on-error: true
 
-      - name: Upload armv7 artifacts
-        id: upload-armv7-apk
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-armv7-apk
-          path: app/build/outputs/apk/app/release/*-v7a.apk
-        continue-on-error: true
+      # - name: Upload armv7 artifacts
+      #   id: upload-armv7-apk
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: release-armv7-apk
+      #     path: app/build/outputs/apk/app/release/*-v7a.apk
+      #   continue-on-error: true
 
-      - name: Upload universal artifacts
-        id: upload-universal-apk
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-universal-apk
-          path: app/build/outputs/apk/app/release/*-universal.apk
-        continue-on-error: true
+      # - name: Upload universal artifacts
+      #   id: upload-universal-apk
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: release-universal-apk
+      #     path: app/build/outputs/apk/app/release/*-universal.apk
+      #   continue-on-error: true
