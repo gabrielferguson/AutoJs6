@@ -1056,27 +1056,10 @@
     <string name="text_write_system_settings">修改系统设置</string>
 
     <!-- Health Connect Permissions Rationale -->
-    <string name="text_health_connect_permissions">Health Connect 权限</string>
-    <string name="text_health_connect_permissions_title">Health Connect 权限</string>
-    <string name="text_health_connect_permissions_description">AutoJs6 请求通过 Health Connect 访问您的健康数据，以提供健康相关的自动化功能。这包括读取和写入健康数据，如睡眠、运动和健康指标。</string>
-    <string name="text_health_connect_not_available_description">您的设备上未安装 Health Connect。请从 Google Play 商店安装 Health Connect 以在 AutoJs6 中使用健康相关的自动化功能。</string>
-    <string name="text_health_connect_read_permission">读取健康数据用于分析并在自动化脚本中使用</string>
-    <string name="text_health_connect_write_permission">写入健康数据以记录活动和指标</string>
-    <string name="text_health_connect_background_permission">访问历史健康数据进行全面分析</string>
-    <string name="text_health_connect_why_needed">这些权限允许 AutoJs6 创建强大的健康相关自动化脚本，可以与您的健身数据交互、跟踪进度并集成到健康监控工作流程中。</string>
-    <string name="text_go_to_health_connect_settings">前往 Health Connect 设置</string>
-    <string name="text_install_health_connect">安装 Health Connect</string>
-    <string name="text_not_now">暂不设置</string>
-    <string name="text_health_connect_icon">Health Connect 图标</string>
-    <string name="text_read_permission_icon">读取权限图标</string>
-    <string name="text_write_permission_icon">写入权限图标</string>
-    <string name="text_background_permission_icon">后台权限图标</string>
-    <string name="text_opening_health_connect">正在打开 Health Connect...</string>
-    <string name="text_opening_health_connect_settings">正在打开 Health Connect 设置...</string>
-    <string name="text_opening_system_settings">正在打开系统设置...</string>
-    <string name="text_unable_to_open_settings">无法打开设置</string>
-    <string name="text_opening_play_store">正在打开 Google Play 商店...</string>
-    <string name="text_opening_browser_for_health_connect">正在打开浏览器以安装 Health Connect...</string>
-    <string name="text_unable_to_install_health_connect">无法安装 Health Connect</string>
+    <string name="health_connect_permissions_rationale_title">Health Connect 权限说明</string>
+    <string name="health_connect_permissions_rationale_message">AutoJs6 请求访问 Health Connect 数据以提供健康和健身追踪的自动化功能。\n\n此权限允许 AutoJs6：\n• 读取和写入睡眠数据\n• 在后台访问健康数据\n• 读取历史健康数据\n• 写入医疗数据记录\n\n您的健康数据隐私很重要。AutoJs6 只会在您的脚本明确请求时访问数据，并遵循您的权限设置。</string>
+    <string name="health_connect_permissions_rationale_open_settings">打开 Health Connect 设置</string>
+    <string name="health_connect_permissions_rationale_not_available">此设备不支持 Health Connect</string>
+    <string name="health_connect_permissions_rationale_understand">我知道了</string>
 
 </resources>
