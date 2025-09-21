@@ -7,6 +7,7 @@ import android.util.Log
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.SleepSessionRecord
+import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import kotlinx.coroutines.runBlocking
@@ -27,7 +28,7 @@ import java.time.format.DateTimeFormatter
  * 为 AutoJs6 脚本提供睡眠数据读写功能
  * 
  * Created for AutoJs6 Health Connect integration
- * Modified by gabrielferguson on 2025-09-21
+ * Modified by gabrielfergerson on 2025-09-21
  */
 class HealthConnect(private val context: Context, private val scriptRuntime: ScriptRuntime) {
 
@@ -180,7 +181,7 @@ class HealthConnect(private val context: Context, private val scriptRuntime: Scr
                     if (record.stages.isNotEmpty()) {
                         val stages = record.stages.map { stage ->
                             mapOf(
-                                "stage" to stage.stage.name,
+                                "stage" to stage.stage.toString(), // 修复: 使用 toString() 而不是 .name
                                 "startTime" to formatInstant(stage.startTime),
                                 "endTime" to formatInstant(stage.endTime)
                             ).toNativeObject()
@@ -235,18 +236,21 @@ class HealthConnect(private val context: Context, private val scriptRuntime: Scr
             val startTime = parseDateTime(startTimeStr)
             val endTime = parseDateTime(endTimeStr)
 
-            if (endTime.isBefore(startTime) || endTime.isEqual(startTime)) {
+            // 修复: 使用 == 比较而不是 isEqual
+            if (endTime.isBefore(startTime) || endTime == startTime) {
                 throw IllegalArgumentException("endTime must be after startTime")
             }
 
             runBlocking {
+                // 修复: 添加 metadata 参数
                 val sleepRecord = SleepSessionRecord(
                     startTime = startTime,
                     startZoneOffset = null,
                     endTime = endTime,
                     endZoneOffset = null,
                     title = coerceString(dataMap["title"] ?: "AutoJs6 Sleep Record"),
-                    notes = coerceString(dataMap["notes"] ?: "")
+                    notes = coerceString(dataMap["notes"] ?: ""),
+                    metadata = Metadata() // 添加必需的 metadata 参数
                 )
 
                 client.insertRecords(listOf(sleepRecord))
@@ -346,7 +350,11 @@ class HealthConnect(private val context: Context, private val scriptRuntime: Scr
             when {
                 dateTimeStr.contains("T") -> {
                     // ISO 格式: 2024-01-20T22:30:00
-                    Instant.parse("${dateTimeStr}:00Z")
+                    if (dateTimeStr.endsWith("Z")) {
+                        Instant.parse(dateTimeStr)
+                    } else {
+                        Instant.parse("${dateTimeStr}Z")
+                    }
                 }
                 dateTimeStr.matches(Regex("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}")) -> {
                     // 标准格式: 2024-01-20 22:30:00
