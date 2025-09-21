@@ -44,6 +44,9 @@ dependencies /* Unclassified */ {
     implementation("androidx.cardview:cardview:1.0.0")
     implementation("androidx.multidex:multidex:2.0.1")
 
+    // Add a dependency of Health Connect SDK
+    implementation("androidx.health.connect:connect-client:1.2.0-alpha01")
+
     // Material Components
     implementation("com.google.android.material:material:1.12.0")
 
