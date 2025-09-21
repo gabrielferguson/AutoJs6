@@ -128,8 +128,7 @@ pluginManagement {
     val agpReleases: List<String> = listOf(
         "8.11.0-alpha10",
         "8.10.0",
-        "8.9.3", /* May 17, 2025. */
-        "8.9.1",
+        "8.9.1", /* May 1, 2024. */
         "8.8.2",
         "8.7.3",
         "8.6.1",
@@ -222,8 +221,7 @@ pluginManagement {
                 // @Updated by SuperMonster003 on May 13, 2025.
                 agpVersionMap = mapOf(
                     "2025.1" to "8.10.0", /* May 13, 2025. */
-                    "2024.3" to "8.9.3", /* May 17, 2025. */
-                    "2024.3" to "8.9.1", /* May 1, 2025. */
+                    "2024.3" to "8.9.1", /* May 1, 2024. */
                     "2024.2" to "8.7.3", /* Jan 13, 2025. */
                     "2024.1" to "8.5.2", /* Aug 30, 2024. */
                     "2023.3" to "8.4.2", /* Mar 28, 2024. */
@@ -284,7 +282,6 @@ pluginManagement {
                 name = "IntelliJIdea", vendor = "Jetbrains",
                 // @Updated by SuperMonster003 on Apr 23, 2025.
                 agpVersionMap = mapOf(
-                    "2025.1" to "8.9.3", /* May 17, 2025. */
                     "2024.3.1" to "8.9.1", /* Dec 10, 2024. */
                     "2024.3" to "8.7.0-rc01", /* Nov 15, 2024. */
                     "2024.2" to "8.5.2", /* Aug 13, 2024. */
