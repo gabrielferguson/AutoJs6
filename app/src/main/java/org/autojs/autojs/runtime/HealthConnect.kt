@@ -7,6 +7,8 @@ import android.util.Log
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.SleepSessionRecord
+import androidx.health.connect.client.records.metadata.DataOrigin
+import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import kotlinx.coroutines.runBlocking
@@ -232,14 +234,22 @@ class HealthConnect(private val context: Context, private val scriptRuntime: Scr
             }
 
             runBlocking {
-                // 修复：简化 SleepSessionRecord 构造
+                // Create metadata with data origin for Health Connect 1.1.0-beta01
+                val metadata = Metadata.Builder()
+                    .setDataOrigin(DataOrigin.Builder()
+                        .setPackageName(context.packageName)
+                        .build())
+                    .build()
+
+                // Create SleepSessionRecord with required metadata parameter
                 val sleepRecord = SleepSessionRecord(
                     startTime = startTime,
                     startZoneOffset = ZoneOffset.systemDefault().rules.getOffset(startTime),
                     endTime = endTime,
                     endZoneOffset = ZoneOffset.systemDefault().rules.getOffset(endTime),
                     title = coerceString(dataMap["title"] ?: "AutoJs6 Sleep Record"),
-                    notes = coerceString(dataMap["notes"] ?: "")
+                    notes = coerceString(dataMap["notes"] ?: ""),
+                    metadata = metadata
                 )
 
                 client.insertRecords(listOf(sleepRecord))
