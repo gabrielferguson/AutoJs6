@@ -282,7 +282,7 @@ class HealthConnect(private val context: Context, private val scriptRuntime: Scr
             runBlocking {
                 client.deleteRecords(
                     recordType = SleepSessionRecord::class,
-                    recordIdsList = listOf(recordId),
+                    idList = listOf(recordId),
                     clientRecordIdsList = emptyList()
                 )
                 Log.d(TAG, "Sleep record deleted successfully: $recordId")
