@@ -309,7 +309,7 @@ class HealthConnect(private val context: Context, private val scriptRuntime: Scr
      */
     @ScriptInterface
     fun getSleepStats(days: Int = 7): NativeObject {
-        val records = getSleepRecords(mapOf("days" to days))
+        val records = getSleepRecords(days)
         val stats = mutableMapOf<String, Any?>()
         if (records.size == 0) {
             stats["totalRecords"] = 0
@@ -337,16 +337,13 @@ class HealthConnect(private val context: Context, private val scriptRuntime: Scr
     }
 
     // ========= ① 时间戳+stage 解析工具 =========
-    private fun toInstantMs(any: Any?): Instant {
-        return when (any) {
-            is Number -> Instant.ofEpochMilli(any.toLong())
-            is String -> {
-                // 纯数字字符串 => 当作毫秒
-                if (any.matches(Regex("^\\d{13}$"))) Instant.ofEpochMilli(any.toLong())
-                else parseDateTime(any) // 保留你原来的 ISO/格式化解析
-            }
-            else -> throw IllegalArgumentException("time must be 13-digit millis, number, or ISO string")
+    private fun toInstantMs(any: Any?): Instant = when (any) {
+        is Number -> Instant.ofEpochMilli(any.toLong())
+        is String -> {
+            if (any.matches(Regex("^\\d{13}$"))) Instant.ofEpochMilli(any.toLong())
+            else parseDateTime(any, ZoneId.systemDefault())
         }
+        else -> throw IllegalArgumentException("time must be 13-digit millis, number, or ISO string")
     }
 
     private fun toStageType(value: Any?): Int {
@@ -411,7 +408,7 @@ class HealthConnect(private val context: Context, private val scriptRuntime: Scr
             val dev = device ?: Device(Device.TYPE_UNKNOWN)
             return when {
                 id != null -> Metadata.autoRecordedWithId(id, dev)
-                clientId != null -> Metadata.autoRecorded(clientId, clientVer, dev)
+                clientId != null -> Metadata.autoRecorded(dev, clientId, clientVer) // 顺序调整
                 else -> Metadata.autoRecorded(dev)
             }
         }
@@ -420,7 +417,7 @@ class HealthConnect(private val context: Context, private val scriptRuntime: Scr
             val dev = device ?: Device(Device.TYPE_UNKNOWN)
             return when {
                 id != null -> Metadata.activelyRecordedWithId(id, dev)
-                clientId != null -> Metadata.activelyRecorded(clientId, clientVer, dev)
+                clientId != null -> Metadata.activelyRecorded(dev, clientId, clientVer) // 顺序调整
                 else -> Metadata.activelyRecorded(dev)
             }
         }
@@ -556,14 +553,11 @@ class HealthConnect(private val context: Context, private val scriptRuntime: Scr
         }
     }
 
-    private fun recordingMethodName(metadata: Metadata): String {
-        // SDK 并未直接提供字符串，统一返回用户设置的工厂方法语义
-        return when {
-            metadata.isManualEntry -> "MANUAL_ENTRY"
-            metadata.isAutoRecorded -> "AUTOMATICALLY_RECORDED"
-            metadata.isActivelyRecorded -> "ACTIVELY_RECORDED"
-            else -> "UNKNOWN"
-        }
+    private fun recordingMethodName(metadata: Metadata): String = when (metadata.recordingMethod) {
+        Metadata.RECORDING_METHOD_MANUAL_ENTRY -> "MANUAL_ENTRY"
+        Metadata.RECORDING_METHOD_AUTOMATICALLY_RECORDED -> "AUTOMATICALLY_RECORDED"
+        Metadata.RECORDING_METHOD_ACTIVELY_RECORDED -> "ACTIVELY_RECORDED"
+        else -> "UNKNOWN"
     }
 
     @Suppress("UNCHECKED_CAST")
