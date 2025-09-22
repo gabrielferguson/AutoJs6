@@ -207,7 +207,6 @@
         android:theme="@style/AppTheme"
         android:localeConfig="@xml/locales_config"
         android:usesCleartextTraffic="true"
-        android:hardwareAccelerated="true"
         tools:ignore="DataExtractionRules"
         tools:targetApi="tiramisu">
 
