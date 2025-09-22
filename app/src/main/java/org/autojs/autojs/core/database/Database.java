@@ -13,8 +13,10 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import org.autojs.autojs.core.eventloop.EventEmitter;
 import org.autojs.autojs.runtime.ScriptRuntime;
+import com.stardust.autojs.core.util.ProcessShell;
 
 import java.io.Closeable;
+import java.io.File;
 import java.util.List;
 import java.util.Locale;
 
@@ -24,14 +26,58 @@ public class Database extends SQLiteOpenHelper implements Closeable {
     private SQLiteDatabase mDatabase;
     private final ScriptRuntime mScriptRuntime;
     private final TypeAdapter mTypeAdapter;
+    private String mOriginalPath;
+    private String mTempPath;
+    private boolean mIsRootProtected;
 
     public Database(@NonNull Context context, @NonNull ScriptRuntime scriptRuntime, @NonNull String name, int version, boolean readable, @Nullable DatabaseCallback databaseCallback, @NonNull TypeAdapter typeAdapter) {
-        super(context, scriptRuntime.files.nonNullPath(name), null, version, databaseCallback == null ? null : new DatabaseErrorHandlerWrapper(databaseCallback));
+        super(context, getEffectiveDatabasePath(scriptRuntime, name), null, version, databaseCallback == null ? null : new DatabaseErrorHandlerWrapper(databaseCallback));
         mTypeAdapter = typeAdapter;
         mCallback = databaseCallback;
         mScriptRuntime = scriptRuntime;
+        
+        String resolvedPath = scriptRuntime.files.nonNullPath(name);
+        mOriginalPath = resolvedPath;
+        mIsRootProtected = isRootProtectedPath(resolvedPath);
+        
+        // If this is a root-protected path, copy the database to accessible location
+        if (mIsRootProtected) {
+            mTempPath = getDatabasePath(); // Get the temp path created by getEffectiveDatabasePath
+            copyRootProtectedDatabase();
+        }
+        
         mDatabase = readable ? getReadableDatabase() : getWritableDatabase();
         scriptRuntime.closeableManager.add(this);
+    }
+
+    private static String getEffectiveDatabasePath(@NonNull ScriptRuntime scriptRuntime, @NonNull String name) {
+        String resolvedPath = scriptRuntime.files.nonNullPath(name);
+        if (isRootProtectedPath(resolvedPath)) {
+            // Return a temporary path for root-protected databases
+            File tempFile = new File("/data/local/tmp/", "sqlite_" + System.currentTimeMillis() + ".db");
+            return tempFile.getAbsolutePath();
+        }
+        return resolvedPath;
+    }
+
+    private static boolean isRootProtectedPath(String path) {
+        return path != null && path.startsWith("/data/data/");
+    }
+
+    private void copyRootProtectedDatabase() {
+        try {
+            // Use root shell to copy the database file from original to temp location
+            ProcessShell.Result result = ProcessShell.execCommand(
+                "cp '" + mOriginalPath + "' '" + mTempPath + "' && chmod 666 '" + mTempPath + "'", 
+                true
+            );
+            
+            if (result.code != 0) {
+                throw new RuntimeException("Failed to copy root-protected database: " + result.error);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to setup root-protected database access", e);
+        }
     }
 
     private ContentValues toContentValues(Object object) {
@@ -108,6 +154,24 @@ public class Database extends SQLiteOpenHelper implements Closeable {
     @Override
     public void close() {
         mDatabase.close();
+        
+        // If this was a root-protected database, sync changes back and clean up
+        if (mIsRootProtected && mTempPath != null) {
+            try {
+                // Copy the modified database back to original location
+                ProcessShell.execCommand(
+                    "cp '" + mTempPath + "' '" + mOriginalPath + "'", 
+                    true
+                );
+                
+                // Clean up temporary file
+                ProcessShell.execCommand("rm '" + mTempPath + "'", true);
+            } catch (Exception e) {
+                // Log error but don't throw - we don't want to break the close operation
+                android.util.Log.w("Database", "Failed to sync root-protected database changes", e);
+            }
+        }
+        
         mScriptRuntime.closeableManager.remove(this);
     }
 
