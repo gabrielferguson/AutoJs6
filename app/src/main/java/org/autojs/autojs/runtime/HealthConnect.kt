@@ -178,29 +178,26 @@ class HealthConnect(private val context: Context, private val scriptRuntime: Scr
         val client = healthConnectClient ?: error("Health Connect client not initialized")
 
         return try {
-            require(sleepData is Map<*, *>) { "Sleep data must be an object" }
-            val map = sleepData as Map<String, Any?>
-
-            // 允许用户传 13 位毫秒或 ISO 字符串
+            val map = anyToMap(sleepData) // ← 兼容 Rhino NativeObject/Map
             val startTime = toInstantMs(map["startTime"] ?: error("startTime required"))
             val endTime = toInstantMs(map["endTime"] ?: error("endTime required"))
             if (!endTime.isAfter(startTime)) error("endTime must be after startTime")
 
             val stages = buildStages(map["stages"])
 
-            val startOffset = ZoneId.systemDefault().rules.getOffset(startTime)
-            val endOffset = ZoneId.systemDefault().rules.getOffset(endTime)
+            val zone = ZoneId.systemDefault()
+            val startOffset = zone.rules.getOffset(startTime)
+            val endOffset = zone.rules.getOffset(endTime)
 
             val record = SleepSessionRecord(
                 startTime = startTime,
                 startZoneOffset = startOffset,
                 endTime = endTime,
                 endZoneOffset = endOffset,
-                title = coerceString(map["title"]).ifEmpty { "AutoJs6 Sleep" },
-                notes = coerceString(map["notes"]),
+                title = optString(map["title"]),
+                notes = optString(map["notes"]),                     // ← 允许为 null
                 stages = stages,
-                // 由用户决定 recordingMethod / device / id / clientRecordId / clientRecordVersion
-                metadata = buildMetadata(map["metadata"])
+                metadata = buildMetadata(map["metadata"])            // ← 内部也做了安全处理
             )
 
             runBlocking { client.insertRecords(listOf(record)) }
@@ -383,17 +380,17 @@ class HealthConnect(private val context: Context, private val scriptRuntime: Scr
     // ========= ② Metadata 构建（支持用户控制操作类型/设备/ID） =========
     private fun buildDevice(map: Any?): Device? {
         val m = map as? Map<*, *> ?: return null
-        val type = (m["type"] as? Number)?.toInt() ?: Device.TYPE_UNKNOWN
-        val manufacturer = coerceString(m["manufacturer"]).ifEmpty { null }
-        val model = coerceString(m["model"]).ifEmpty { null }
+        val type = (m["type"] as? Number)?.toInt() ?: Device.TYPE_PHONE
+        val manufacturer = optString(m["manufacturer"])
+        val model = optString(m["model"])
         return Device(type = type, manufacturer = manufacturer, model = model)
     }
 
     private fun buildMetadata(meta: Any?): Metadata {
         val m = meta as? Map<*, *> ?: emptyMap<Any?, Any?>()
-        val method = coerceString(m["recordingMethod"]).ifEmpty { "manual" }.lowercase()
-        val id = coerceString(m["id"]).ifEmpty { null }
-        val clientId = coerceString(m["clientRecordId"]).ifEmpty { null }
+        val method = optString(m["recordingMethod"])?.lowercase() ?: "manual"
+        val id = optString(m["id"])
+        val clientId = optString(m["clientRecordId"])
         val clientVer = (m["clientRecordVersion"] as? Number)?.toLong() ?: 0L
         val device = buildDevice(m["device"])
 
@@ -408,7 +405,7 @@ class HealthConnect(private val context: Context, private val scriptRuntime: Scr
             val dev = device ?: Device(Device.TYPE_UNKNOWN)
             return when {
                 id != null -> Metadata.autoRecordedWithId(id, dev)
-                clientId != null -> Metadata.autoRecorded(dev, clientId, clientVer) // 顺序调整
+                clientId != null -> Metadata.autoRecorded(dev, clientId, clientVer) // ← 设备优先
                 else -> Metadata.autoRecorded(dev)
             }
         }
@@ -417,7 +414,7 @@ class HealthConnect(private val context: Context, private val scriptRuntime: Scr
             val dev = device ?: Device(Device.TYPE_UNKNOWN)
             return when {
                 id != null -> Metadata.activelyRecordedWithId(id, dev)
-                clientId != null -> Metadata.activelyRecorded(dev, clientId, clientVer) // 顺序调整
+                clientId != null -> Metadata.activelyRecorded(dev, clientId, clientVer) // ← 设备优先
                 else -> Metadata.activelyRecorded(dev)
             }
         }
@@ -438,6 +435,13 @@ class HealthConnect(private val context: Context, private val scriptRuntime: Scr
         }
     }
 
+    // 可选字符串：为 null/空白则返回 null；如果来自 Rhino 的 NativeObject，也安全处理。
+    private fun optString(v: Any?): String? = when (v) {
+        null -> null
+        is String -> v.takeIf { it.isNotBlank() }
+        is NativeObject -> org.autojs.autojs.util.RhinoUtils.coerceString(v).takeIf { it.isNotBlank() }
+        else -> null
+    }
 
     // -------------------- 工具方法 --------------------
 
