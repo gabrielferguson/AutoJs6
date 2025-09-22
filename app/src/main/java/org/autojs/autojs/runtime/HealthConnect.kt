@@ -7,8 +7,6 @@ import android.util.Log
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.SleepSessionRecord
-import androidx.health.connect.client.records.metadata.DataOrigin
-import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import kotlinx.coroutines.runBlocking
@@ -53,11 +51,20 @@ class HealthConnect(private val context: Context, private val scriptRuntime: Scr
      */
     private fun initializeHealthConnect() {
         try {
-            if (HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE) {
-                healthConnectClient = HealthConnectClient.getOrCreate(context)
-                Log.d(TAG, "Health Connect client initialized successfully")
-            } else {
-                Log.w(TAG, "Health Connect SDK not available")
+            when (HealthConnectClient.getSdkStatus(context)) {
+                HealthConnectClient.SDK_AVAILABLE -> {
+                    healthConnectClient = HealthConnectClient.getOrCreate(context)
+                    Log.d(TAG, "Health Connect client initialized successfully")
+                }
+                HealthConnectClient.SDK_UNAVAILABLE -> {
+                    Log.w(TAG, "Health Connect SDK is unavailable")
+                }
+                HealthConnectClient.SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED -> {
+                    Log.w(TAG, "Health Connect SDK requires provider update")
+                }
+                else -> {
+                    Log.w(TAG, "Health Connect SDK status unknown")
+                }
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to initialize Health Connect", e)
@@ -234,22 +241,14 @@ class HealthConnect(private val context: Context, private val scriptRuntime: Scr
             }
 
             runBlocking {
-                // Create metadata with data origin for Health Connect 1.1.0-beta01
-                val metadata = Metadata.Builder()
-                    .setDataOrigin(DataOrigin.Builder()
-                        .setPackageName(context.packageName)
-                        .build())
-                    .build()
-
-                // Create SleepSessionRecord with required metadata parameter
+                // Create SleepSessionRecord with required parameters for Health Connect 1.1.0-beta01
                 val sleepRecord = SleepSessionRecord(
                     startTime = startTime,
                     startZoneOffset = ZoneOffset.systemDefault().rules.getOffset(startTime),
                     endTime = endTime,
                     endZoneOffset = ZoneOffset.systemDefault().rules.getOffset(endTime),
                     title = coerceString(dataMap["title"] ?: "AutoJs6 Sleep Record"),
-                    notes = coerceString(dataMap["notes"] ?: ""),
-                    metadata = metadata
+                    notes = coerceString(dataMap["notes"] ?: "")
                 )
 
                 client.insertRecords(listOf(sleepRecord))
