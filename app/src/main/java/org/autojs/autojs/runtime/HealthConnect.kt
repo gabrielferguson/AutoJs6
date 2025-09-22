@@ -250,7 +250,7 @@ class HealthConnect(private val context: Context, private val scriptRuntime: Scr
                     endZoneOffset = ZoneOffset.systemDefault().rules.getOffset(endTime),
                     title = coerceString(dataMap["title"] ?: "AutoJs6 Sleep Record"),
                     notes = coerceString(dataMap["notes"] ?: ""),
-                    metadata = Metadata()
+                    metadata = Metadata.manualEntry() // 1.1.0-alpha12 及以后必填
                 )
 
                 client.insertRecords(listOf(sleepRecord))
