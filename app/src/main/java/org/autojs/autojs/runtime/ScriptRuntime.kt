@@ -93,6 +93,7 @@ import org.autojs.autojs.runtime.api.augment.util.VersionCodesInfo
 import org.autojs.autojs.runtime.api.augment.web.Web
 import org.autojs.autojs.runtime.api.augment.web.WebSocket
 import org.autojs.autojs.runtime.api.augment.web.WebSocketFields
+import org.autojs.autojs.runtime.api.HealthConnect
 import org.autojs.autojs.runtime.exception.ScriptEnvironmentException
 import org.autojs.autojs.runtime.exception.ScriptException
 import org.autojs.autojs.runtime.exception.ScriptInterruptedException
@@ -347,8 +348,9 @@ class ScriptRuntime private constructor(builder: Builder) {
     @ScriptVariable
     val sqlite: ApiSQLite
 
+    @JvmField
     @ScriptVariable
-    val healthConnect by lazy { ScriptRuntimeHelper.addHealthConnect(this) }
+    lateinit var healthConnect: HealthConnect
 
     @JvmField
     @ScriptVariable
@@ -460,6 +462,9 @@ class ScriptRuntime private constructor(builder: Builder) {
 
         shizuku = WrappedShizuku
         mime = ApiMime
+
+        // ⬇️ 在 uiHandler 就绪之后初始化 healthConnect
+        healthConnect = ScriptRuntimeHelper.addHealthConnect(this)
     }
 
     fun initPrologue() {
