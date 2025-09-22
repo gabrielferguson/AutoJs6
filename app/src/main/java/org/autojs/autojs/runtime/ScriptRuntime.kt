@@ -347,7 +347,6 @@ class ScriptRuntime private constructor(builder: Builder) {
     @ScriptVariable
     val sqlite: ApiSQLite
 
-    @JvmField
     @ScriptVariable
     val healthConnect by lazy { ScriptRuntimeHelper.addHealthConnect(this) }
 
