@@ -350,6 +350,11 @@ class HealthConnect(private val context: Context, private val scriptRuntime: Scr
     }
 
     private fun toStageType(value: Any?): Int {
+        // 允许传对象：{type:"light"} 或 {value:"deep"} 或 {stage:"rem"}
+        if (value is Map<*, *>) {
+            val inner = value["type"] ?: value["value"] ?: value["stage"]
+            return toStageType(inner)
+        }
         val s = coerceString(value).trim().lowercase()
         return when (s) {
             "unknown" -> SleepSessionRecord.STAGE_TYPE_UNKNOWN
@@ -360,10 +365,7 @@ class HealthConnect(private val context: Context, private val scriptRuntime: Scr
             "light" -> SleepSessionRecord.STAGE_TYPE_LIGHT
             "deep" -> SleepSessionRecord.STAGE_TYPE_DEEP
             "rem" -> SleepSessionRecord.STAGE_TYPE_REM
-            else -> {
-                // 允许直接传整型常量
-                (value as? Number)?.toInt() ?: SleepSessionRecord.STAGE_TYPE_UNKNOWN
-            }
+            else -> (value as? Number)?.toInt() ?: SleepSessionRecord.STAGE_TYPE_UNKNOWN
         }
     }
 
@@ -372,11 +374,11 @@ class HealthConnect(private val context: Context, private val scriptRuntime: Scr
         return items.map { it as Map<*, *> }.map { m ->
             val start = toInstantMs(m["startTime"])
             val end = toInstantMs(m["endTime"])
-            if (!end.isAfter(start)) error("stage.endTime must be after stage.startTime")
+            require(end.isAfter(start)) { "stage.endTime must be after stage.startTime" }
             SleepSessionRecord.Stage(
                 startTime = start,
                 endTime = end,
-                stage = toStageType(m["stage"])
+                stage = toStageType(m["stage"]) // <== 确保是 Int
             )
         }
     }
