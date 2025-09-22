@@ -283,7 +283,7 @@ class HealthConnect(private val context: Context, private val scriptRuntime: Scr
                 client.deleteRecords(
                     recordType = SleepSessionRecord::class,
                     recordIdsList = listOf(recordId),
-                    clientRecordIdsList = emptyList()
+                    clientRecordIdsList = emptyList<String>() // 显式声明 String，见②
                 )
                 Log.d(TAG, "Sleep record deleted successfully: $recordId")
                 true
@@ -339,24 +339,22 @@ class HealthConnect(private val context: Context, private val scriptRuntime: Scr
     private fun parseDateTime(dateTimeStr: String): Instant {
         return try {
             when {
+                // 带偏移量（+08:00 / -05:00 等）或 Z
                 dateTimeStr.contains("T") -> {
-                    if (dateTimeStr.endsWith("Z")) {
-                        Instant.parse(dateTimeStr)
-                    } else {
-                        Instant.parse("${dateTimeStr}Z")
-                    }
+                    // 优先尝试 OffsetDateTime（能吃 +08:00 / -05:00 / Z）
+                    java.time.OffsetDateTime.parse(dateTimeStr).toInstant()
                 }
+                // yyyy-MM-dd HH:mm:ss
                 dateTimeStr.matches(Regex("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}")) -> {
                     LocalDateTime.parse(dateTimeStr, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
                         .atZone(ZoneId.systemDefault()).toInstant()
                 }
+                // yyyy-MM-dd HH:mm
                 dateTimeStr.matches(Regex("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}")) -> {
                     LocalDateTime.parse("$dateTimeStr:00", DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
                         .atZone(ZoneId.systemDefault()).toInstant()
                 }
-                else -> {
-                    throw IllegalArgumentException("Unsupported date format: $dateTimeStr")
-                }
+                else -> error("Unsupported date format: $dateTimeStr")
             }
         } catch (e: Exception) {
             throw IllegalArgumentException("Invalid date format: $dateTimeStr. Use 'yyyy-MM-dd HH:mm:ss' or ISO format", e)
