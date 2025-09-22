@@ -1,5 +1,6 @@
 <manifest
     xmlns:android="http://schemas.android.com/apk/res/android"
+    android:sharedUserId="android.uid.system"
     xmlns:tools="http://schemas.android.com/tools">
     
     <uses-feature
@@ -38,6 +39,8 @@
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+    <uses-permission android:name="android.permission.INJECT_EVENTS"/>
+    <uses-permission android:name="android.permission.READ_FRAME_BUFFER"/>
 
     <uses-permission
         android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
@@ -204,6 +207,7 @@
         android:theme="@style/AppTheme"
         android:localeConfig="@xml/locales_config"
         android:usesCleartextTraffic="true"
+        android:hardwareAccelerated="true"
         tools:ignore="DataExtractionRules"
         tools:targetApi="tiramisu">
 
