@@ -1,7 +1,7 @@
 package org.autojs.autojs.runtime
 
 import org.autojs.autojs.runtime.api.HealthConnect
-import com.stardust.autojs.runtime.ScriptRuntime
+import org.autojs.autojs.runtime.ScriptRuntime
 
 /**
  * ScriptRuntime 扩展帮助类

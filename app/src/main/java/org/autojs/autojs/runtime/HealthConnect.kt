@@ -7,13 +7,14 @@ import android.util.Log
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.SleepSessionRecord
+import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import kotlinx.coroutines.runBlocking
 import org.autojs.autojs.annotation.ScriptInterface
 import org.autojs.autojs.extension.ArrayExtensions.toNativeArray
 import org.autojs.autojs.extension.ArrayExtensions.toNativeObject
-import com.stardust.autojs.runtime.ScriptRuntime
+import org.autojs.autojs.runtime.ScriptRuntime
 import org.autojs.autojs.util.RhinoUtils.coerceString
 import org.mozilla.javascript.NativeArray
 import org.mozilla.javascript.NativeObject
@@ -248,7 +249,8 @@ class HealthConnect(private val context: Context, private val scriptRuntime: Scr
                     endTime = endTime,
                     endZoneOffset = ZoneOffset.systemDefault().rules.getOffset(endTime),
                     title = coerceString(dataMap["title"] ?: "AutoJs6 Sleep Record"),
-                    notes = coerceString(dataMap["notes"] ?: "")
+                    notes = coerceString(dataMap["notes"] ?: ""),
+                    metadata = Metadata()
                 )
 
                 client.insertRecords(listOf(sleepRecord))
