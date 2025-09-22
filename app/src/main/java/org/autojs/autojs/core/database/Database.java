@@ -61,20 +61,33 @@ public class Database extends SQLiteOpenHelper implements Closeable {
     }
 
     private static boolean isRootProtectedPath(String path) {
-        return path != null && path.startsWith("/data/data/");
+        return path != null && (path.startsWith("/data/data/") || path.startsWith("/system/") || path.startsWith("/data/system/"));
     }
 
     private void copyRootProtectedDatabase() {
         try {
+            // First check if the original database file exists
+            ProcessShell.Result checkResult = ProcessShell.execCommand(
+                "test -f '" + mOriginalPath + "'", 
+                true
+            );
+            
+            if (checkResult.code != 0) {
+                throw new RuntimeException("Root-protected database file does not exist: " + mOriginalPath);
+            }
+            
             // Use root shell to copy the database file from original to temp location
-            ProcessShell.Result result = ProcessShell.execCommand(
+            ProcessShell.Result copyResult = ProcessShell.execCommand(
                 "cp '" + mOriginalPath + "' '" + mTempPath + "' && chmod 666 '" + mTempPath + "'", 
                 true
             );
             
-            if (result.code != 0) {
-                throw new RuntimeException("Failed to copy root-protected database: " + result.error);
+            if (copyResult.code != 0) {
+                throw new RuntimeException("Failed to copy root-protected database. Error: " + copyResult.error + 
+                    ", Result: " + copyResult.result);
             }
+        } catch (RuntimeException e) {
+            throw e;
         } catch (Exception e) {
             throw new RuntimeException("Failed to setup root-protected database access", e);
         }
@@ -159,13 +172,20 @@ public class Database extends SQLiteOpenHelper implements Closeable {
         if (mIsRootProtected && mTempPath != null) {
             try {
                 // Copy the modified database back to original location
-                ProcessShell.execCommand(
+                ProcessShell.Result syncResult = ProcessShell.execCommand(
                     "cp '" + mTempPath + "' '" + mOriginalPath + "'", 
                     true
                 );
                 
+                if (syncResult.code != 0) {
+                    android.util.Log.w("Database", "Failed to sync changes back to root-protected database: " + syncResult.error);
+                }
+                
                 // Clean up temporary file
-                ProcessShell.execCommand("rm '" + mTempPath + "'", true);
+                ProcessShell.Result cleanupResult = ProcessShell.execCommand("rm '" + mTempPath + "'", true);
+                if (cleanupResult.code != 0) {
+                    android.util.Log.w("Database", "Failed to clean up temporary database file: " + mTempPath);
+                }
             } catch (Exception e) {
                 // Log error but don't throw - we don't want to break the close operation
                 android.util.Log.w("Database", "Failed to sync root-protected database changes", e);
@@ -217,6 +237,14 @@ public class Database extends SQLiteOpenHelper implements Closeable {
 
     public String getPath() {
         return mDatabase.getPath();
+    }
+
+    public String getOriginalPath() {
+        return mIsRootProtected ? mOriginalPath : mDatabase.getPath();
+    }
+
+    public boolean isRootProtected() {
+        return mIsRootProtected;
     }
 
     public TypeAdapter getTypeAdapter() {
