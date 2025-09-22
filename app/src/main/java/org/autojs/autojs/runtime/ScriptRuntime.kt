@@ -350,7 +350,7 @@ class ScriptRuntime private constructor(builder: Builder) {
 
     @JvmField
     @ScriptVariable
-    lateinit var healthConnect: HealthConnect
+    val healthConnect: HealthConnect
 
     @JvmField
     @ScriptVariable
