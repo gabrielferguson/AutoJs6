@@ -349,6 +349,10 @@ class ScriptRuntime private constructor(builder: Builder) {
 
     @JvmField
     @ScriptVariable
+    val healthConnect by lazy { ScriptRuntimeHelper.addHealthConnect(this) }
+
+    @JvmField
+    @ScriptVariable
     val scale = ApiScale(this)
 
     @ScriptInterface

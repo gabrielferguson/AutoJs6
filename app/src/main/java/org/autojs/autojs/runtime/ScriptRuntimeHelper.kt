@@ -13,8 +13,8 @@ object ScriptRuntimeHelper {
      */
     @JvmStatic
     fun addHealthConnect(runtime: ScriptRuntime): HealthConnect {
-        // 修复：使用正确的方法获取 Context
-        val context = runtime.uiHandler.context
+        // Fix: Use proper context access method for ScriptRuntime
+        val context = runtime.uiHandler.applicationContext
         return HealthConnect(context, runtime)
     }
 }
