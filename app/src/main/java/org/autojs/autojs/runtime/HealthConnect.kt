@@ -170,120 +170,7 @@ class HealthConnect(private val context: Context, private val scriptRuntime: Scr
         }
     }
 
-    /**
-     * 读取睡眠记录
-     * @param options 可选参数对象：
-     *  {
-     *    startTimeMillis?: Long, // 13位
-     *    endTimeMillis?: Long,   // 13位，默认 = now
-     *    days?: Int,             // 与毫秒区间二选一，默认 7
-     *  }
-     */
-    @ScriptInterface
-    @JvmOverloads
-    fun getSleepRecords(options: Any? = null): NativeArray {
-        if (!isAvailable()) error("Health Connect is not available")
-        if (!hasPermissions()) error("Health Connect permissions not granted. Call requestPermissions() first.")
-        val client = healthConnectClient ?: error("Health Connect client not initialized")
-
-        return try {
-            runBlocking {
-                // 解析过滤区间
-                val (start, end) = parseReadWindow(options)
-
-                val request = ReadRecordsRequest(
-                    recordType = SleepSessionRecord::class,
-                    timeRangeFilter = TimeRangeFilter.between(start, end)
-                )
-
-                val response = client.readRecords(request)
-                val result = mutableListOf<NativeObject>()
-
-                for (record in response.records) {
-                    val obj = mutableMapOf<String, Any?>()
-
-                    obj["id"] = record.metadata.id
-                    obj["title"] = record.title ?: ""
-                    obj["notes"] = record.notes ?: ""
-
-                    // 返回两种时间表示
-                    obj["startTime"] = formatInstant(record.startTime)
-                    obj["endTime"] = formatInstant(record.endTime)
-                    obj["startTimeMillis"] = record.startTime.toEpochMilli()
-                    obj["endTimeMillis"] = record.endTime.toEpochMilli()
-                    obj["durationSec"] = record.endTime.epochSecond - record.startTime.epochSecond
-
-                    // 阶段
-                    if (record.stages.isNotEmpty()) {
-                        val stages = record.stages.map { st ->
-                            mapOf(
-                                "stage" to (STAGE_CONST_TO_NAME[st.stage] ?: st.stage.toString()),
-                                "stageConst" to st.stage,
-                                "startTime" to formatInstant(st.startTime),
-                                "endTime" to formatInstant(st.endTime),
-                                "startTimeMillis" to st.startTime.toEpochMilli(),
-                                "endTimeMillis" to st.endTime.toEpochMilli()
-                            ).toNativeObject()
-                        }
-                        obj["stages"] = stages.toNativeArray()
-                    } else {
-                        obj["stages"] = NativeArray(0)
-                    }
-
-                    // 元数据（可读）
-                    obj["metadata"] = mapOf(
-                        "recordingMethod" to recordingMethodName(record.metadata),
-                        "clientRecordId" to record.metadata.clientRecordId,
-                        "clientRecordVersion" to record.metadata.clientRecordVersion,
-                        "deviceType" to deviceTypeName(record.metadata.device?.type),
-                        "lastModifiedTime" to formatInstant(record.metadata.lastModifiedTime),
-                        "lastModifiedTimeMillis" to record.metadata.lastModifiedTime?.toEpochMilli()
-                    ).toNativeObject()
-
-                    result.add(obj.toNativeObject())
-                }
-
-                Log.d(TAG, "Retrieved ${result.size} sleep records")
-                result.toNativeArray()
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to read sleep records", e)
-            throw RuntimeException("读取睡眠数据失败: ${e.message}", e)
-        }
-    }
-
-    /**
-     * 写入睡眠记录
-     *
-     * @param sleepData 形如：
-     * {
-     *   // 必填：传入 13位毫秒时间戳；也兼容旧字段 "startTime"/"endTime" 字符串
-     *   startTimeMillis: 1726950000000,
-     *   endTimeMillis:   1726980000000,
-     *
-     *   title?: "My Sleep",
-     *   notes?: "Hello",
-     *
-     *   // 可选：阶段列表（推荐）
-     *   stages: [
-     *     { stage: "LIGHT", startTimeMillis: 1726950000000, endTimeMillis: 1726957200000 },
-     *     { stage: "DEEP",  startTimeMillis: 1726957200000, endTimeMillis: 1726960800000 },
-     *     { stage: "REM",   startTimeMillis: 1726960800000, endTimeMillis: 1726963200000 }
-     *   ],
-     *
-     *   // 可选：metadata 配置（记录方式 + 设备）
-     *   metadata: {
-     *     method: "manual" | "auto" | "active" | "unknown",
-     *     deviceType?: "PHONE" | "WATCH" | ...,
-     *     clientRecordId?: "xxx",
-     *     clientRecordVersion?: 1,
-     *     id?: "fixed-record-id" // 可选，若指定则用 *WithId 变体
-     *   },
-     *
-     *   // 可选：时区（例如 "Asia/Shanghai"），默认系统
-     *   zoneId?: "Asia/Shanghai"
-     * }
-     */
+    // ========= ③ 写入逻辑：支持 13 位毫秒、stages、metadata =========
     @ScriptInterface
     fun writeSleepRecord(sleepData: Any): Boolean {
         if (!isAvailable()) error("Health Connect is not available")
@@ -291,43 +178,104 @@ class HealthConnect(private val context: Context, private val scriptRuntime: Scr
         val client = healthConnectClient ?: error("Health Connect client not initialized")
 
         return try {
-            val map = anyToMap(sleepData)
+            require(sleepData is Map<*, *>) { "Sleep data must be an object" }
+            val map = sleepData as Map<String, Any?>
 
-            // 1) 解析时区
-            val zoneId = (map["zoneId"]?.toString()?.takeIf { it.isNotBlank() })?.let { ZoneId.of(it) }
-                ?: ZoneId.systemDefault()
+            // 允许用户传 13 位毫秒或 ISO 字符串
+            val startTime = toInstantMs(map["startTime"] ?: error("startTime required"))
+            val endTime = toInstantMs(map["endTime"] ?: error("endTime required"))
+            if (!endTime.isAfter(startTime)) error("endTime must be after startTime")
 
-            // 2) 解析时间（毫秒优先）
-            val start = parseAnyToInstant(map["startTimeMillis"] ?: map["startTime"], zoneId, "startTime")
-            val end = parseAnyToInstant(map["endTimeMillis"] ?: map["endTime"], zoneId, "endTime")
-            require(end.isAfter(start)) { "endTime must be after startTime" }
+            val stages = buildStages(map["stages"])
 
-            // 3) 解析 stages
-            val stagesInput = map["stages"]
-            val stages: List<Stage> = parseStages(stagesInput, zoneId, start, end)
+            val startOffset = ZoneId.systemDefault().rules.getOffset(startTime)
+            val endOffset = ZoneId.systemDefault().rules.getOffset(endTime)
 
-            // 4) 解析 metadata
-            val meta: Metadata = buildMetadata(anyToMap(map["metadata"]), start)
+            val record = SleepSessionRecord(
+                startTime = startTime,
+                startZoneOffset = startOffset,
+                endTime = endTime,
+                endZoneOffset = endOffset,
+                title = coerceString(map["title"]).ifEmpty { "AutoJs6 Sleep" },
+                notes = coerceString(map["notes"]),
+                stages = stages,
+                // 由用户决定 recordingMethod / device / id / clientRecordId / clientRecordVersion
+                metadata = buildMetadata(map["metadata"])
+            )
 
-            // 5) 构造并写入
-            runBlocking {
-                val record = SleepSessionRecord(
-                    startTime = start,
-                    startZoneOffset = zoneId.rules.getOffset(start),
-                    endTime = end,
-                    endZoneOffset = zoneId.rules.getOffset(end),
-                    title = coerceString(map["title"] ?: "AutoJs6 Sleep Record"),
-                    notes = coerceString(map["notes"] ?: ""),
-                    stages = stages,
-                    metadata = meta
-                )
-                client.insertRecords(listOf(record))
-                Log.d(TAG, "Sleep record written successfully")
-                true
-            }
+            runBlocking { client.insertRecords(listOf(record)) }
+            true
         } catch (e: Exception) {
             Log.e(TAG, "Failed to write sleep record", e)
             throw RuntimeException("写入睡眠数据失败: ${e.message}", e)
+        }
+    }
+
+    // ========= ④ 读取逻辑：输出 recordingMethod/Device，移除旧属性读取 =========
+    @ScriptInterface
+    @JvmOverloads
+    fun getSleepRecords(days: Int = 7): NativeArray {
+        if (!isAvailable()) error("Health Connect is not available")
+        if (!hasPermissions()) error("Health Connect permissions not granted. Call requestPermissions() first.")
+        val client = healthConnectClient ?: error("Health Connect client not initialized")
+
+        return try {
+            runBlocking {
+                val endTime = Instant.now()
+                val startTime = endTime.minusSeconds(days * 24 * 3600L)
+                val response = client.readRecords(
+                    ReadRecordsRequest(
+                        recordType = SleepSessionRecord::class,
+                        timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
+                    )
+                )
+
+                val list = response.records.map { r ->
+                    val meta = r.metadata
+                    val device = meta.device
+                    val obj = mutableMapOf<String, Any?>(
+                        "id" to meta.id,
+                        "clientRecordId" to meta.clientRecordId,
+                        "clientRecordVersion" to meta.clientRecordVersion,
+                        "recordingMethod" to when (meta.recordingMethod) {
+                            Metadata.RECORDING_METHOD_MANUAL_ENTRY -> "manual"
+                            Metadata.RECORDING_METHOD_AUTOMATICALLY_RECORDED -> "auto"
+                            Metadata.RECORDING_METHOD_ACTIVELY_RECORDED -> "active"
+                            else -> "unknown"
+                        },
+                        "device" to if (device == null) null else mapOf(
+                            "type" to device.type,
+                            "manufacturer" to (device.manufacturer ?: ""),
+                            "model" to (device.model ?: "")
+                        ).toNativeObject(),
+                        "dataOriginPackage" to meta.dataOrigin.packageName,
+                        "lastModifiedTime" to formatInstant(meta.lastModifiedTime),
+                        "startTime" to formatInstant(r.startTime),
+                        "endTime" to formatInstant(r.endTime),
+                        "duration" to (r.endTime.epochSecond - r.startTime.epochSecond),
+                        "title" to (r.title ?: ""),
+                        "notes" to (r.notes ?: "")
+                    )
+
+                    if (r.stages.isNotEmpty()) {
+                        val stages = r.stages.map { s ->
+                            mapOf(
+                                "stage" to s.stage,
+                                "startTime" to formatInstant(s.startTime),
+                                "endTime" to formatInstant(s.endTime)
+                            ).toNativeObject()
+                        }
+                        obj["stages"] = stages.toNativeArray()
+                    }
+
+                    obj.toNativeObject()
+                }
+
+                list.toNativeArray()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to read sleep records", e)
+            throw RuntimeException("读取睡眠数据失败: ${e.message}", e)
         }
     }
 
@@ -387,6 +335,110 @@ class HealthConnect(private val context: Context, private val scriptRuntime: Scr
         stats["averageHours"] = (totalDuration / records.size) / 1000.0 / 3600.0
         return stats.toNativeObject()
     }
+
+    // ========= ① 时间戳+stage 解析工具 =========
+    private fun toInstantMs(any: Any?): Instant {
+        return when (any) {
+            is Number -> Instant.ofEpochMilli(any.toLong())
+            is String -> {
+                // 纯数字字符串 => 当作毫秒
+                if (any.matches(Regex("^\\d{13}$"))) Instant.ofEpochMilli(any.toLong())
+                else parseDateTime(any) // 保留你原来的 ISO/格式化解析
+            }
+            else -> throw IllegalArgumentException("time must be 13-digit millis, number, or ISO string")
+        }
+    }
+
+    private fun toStageType(value: Any?): Int {
+        val s = coerceString(value).trim().lowercase()
+        return when (s) {
+            "unknown" -> SleepSessionRecord.STAGE_TYPE_UNKNOWN
+            "awake" -> SleepSessionRecord.STAGE_TYPE_AWAKE
+            "sleeping", "asleep", "general" -> SleepSessionRecord.STAGE_TYPE_SLEEPING
+            "out_of_bed", "out-of-bed", "outofbed" -> SleepSessionRecord.STAGE_TYPE_OUT_OF_BED
+            "awake_in_bed", "awake-in-bed", "awakeinbed" -> SleepSessionRecord.STAGE_TYPE_AWAKE_IN_BED
+            "light" -> SleepSessionRecord.STAGE_TYPE_LIGHT
+            "deep" -> SleepSessionRecord.STAGE_TYPE_DEEP
+            "rem" -> SleepSessionRecord.STAGE_TYPE_REM
+            else -> {
+                // 允许直接传整型常量
+                (value as? Number)?.toInt() ?: SleepSessionRecord.STAGE_TYPE_UNKNOWN
+            }
+        }
+    }
+
+    private fun buildStages(list: Any?): List<SleepSessionRecord.Stage> {
+        val items = (list as? Iterable<*>) ?: return emptyList()
+        return items.map { it as Map<*, *> }.map { m ->
+            val start = toInstantMs(m["startTime"])
+            val end = toInstantMs(m["endTime"])
+            if (!end.isAfter(start)) error("stage.endTime must be after stage.startTime")
+            SleepSessionRecord.Stage(
+                startTime = start,
+                endTime = end,
+                stage = toStageType(m["stage"])
+            )
+        }
+    }
+
+    // ========= ② Metadata 构建（支持用户控制操作类型/设备/ID） =========
+    private fun buildDevice(map: Any?): Device? {
+        val m = map as? Map<*, *> ?: return null
+        val type = (m["type"] as? Number)?.toInt() ?: Device.TYPE_UNKNOWN
+        val manufacturer = coerceString(m["manufacturer"]).ifEmpty { null }
+        val model = coerceString(m["model"]).ifEmpty { null }
+        return Device(type = type, manufacturer = manufacturer, model = model)
+    }
+
+    private fun buildMetadata(meta: Any?): Metadata {
+        val m = meta as? Map<*, *> ?: emptyMap<Any?, Any?>()
+        val method = coerceString(m["recordingMethod"]).ifEmpty { "manual" }.lowercase()
+        val id = coerceString(m["id"]).ifEmpty { null }
+        val clientId = coerceString(m["clientRecordId"]).ifEmpty { null }
+        val clientVer = (m["clientRecordVersion"] as? Number)?.toLong() ?: 0L
+        val device = buildDevice(m["device"])
+
+        fun manual(): Metadata =
+            when {
+                id != null -> Metadata.manualEntryWithId(id, device)
+                clientId != null -> Metadata.manualEntry(clientId, clientVer, device)
+                else -> Metadata.manualEntry(device)
+            }
+
+        fun auto(): Metadata {
+            val dev = device ?: Device(Device.TYPE_UNKNOWN)
+            return when {
+                id != null -> Metadata.autoRecordedWithId(id, dev)
+                clientId != null -> Metadata.autoRecorded(clientId, clientVer, dev)
+                else -> Metadata.autoRecorded(dev)
+            }
+        }
+
+        fun active(): Metadata {
+            val dev = device ?: Device(Device.TYPE_UNKNOWN)
+            return when {
+                id != null -> Metadata.activelyRecordedWithId(id, dev)
+                clientId != null -> Metadata.activelyRecorded(clientId, clientVer, dev)
+                else -> Metadata.activelyRecorded(dev)
+            }
+        }
+
+        fun unknown(): Metadata =
+            when {
+                id != null -> Metadata.unknownRecordingMethodWithId(id, device)
+                clientId != null -> Metadata.unknownRecordingMethod(clientId, clientVer, device)
+                else -> Metadata.unknownRecordingMethod(device)
+            }
+
+        return when (method) {
+            "manual", "manual_entry" -> manual()
+            "auto", "automatically_recorded", "automatically" -> auto()
+            "active", "actively_recorded" -> active()
+            "unknown" -> unknown()
+            else -> manual()
+        }
+    }
+
 
     // -------------------- 工具方法 --------------------
 
@@ -484,75 +536,6 @@ class HealthConnect(private val context: Context, private val scriptRuntime: Scr
                 endTime = e,
                 stage = stageConst
             )
-        }
-    }
-
-    private fun buildMetadata(meta: Map<String, Any?>, sessionStart: Instant): Metadata {
-        if (meta.isEmpty()) {
-            // 默认：手动输入
-            return Metadata.manualEntry()
-        }
-
-        val method = meta["method"]?.toString()?.trim()?.lowercase() ?: "manual"
-        val deviceTypeName = meta["deviceType"]?.toString()?.trim()?.uppercase()
-        val device = deviceTypeName?.let { name ->
-            val type = DEVICE_NAME_TO_TYPE[name]
-                ?: error("Unknown deviceType: $name")
-            Device(type = type)
-        }
-
-        val clientRecordId = meta["clientRecordId"]?.toString()
-        val clientRecordVersion = (meta["clientRecordVersion"] as? Number)?.toLong() ?: 0L
-        val fixedId = meta["id"]?.toString()
-
-        return when (method) {
-            "active", "actively_recorded" -> {
-                if (fixedId != null) {
-                    requireNotNull(device) { "activelyRecordedWithId requires deviceType" }
-                    Metadata.activelyRecordedWithId(id = fixedId, device = device)
-                } else if (clientRecordId != null) {
-                    requireNotNull(device) { "activelyRecorded(clientRecordId..) requires deviceType" }
-                    Metadata.activelyRecorded(clientRecordId, clientRecordVersion, device)
-                } else {
-                    requireNotNull(device) { "activelyRecorded(device) requires deviceType" }
-                    Metadata.activelyRecorded(device)
-                }
-            }
-
-            "auto", "automatically_recorded", "auto_recorded" -> {
-                if (fixedId != null) {
-                    requireNotNull(device) { "autoRecordedWithId requires deviceType" }
-                    Metadata.autoRecordedWithId(id = fixedId, device = device)
-                } else if (clientRecordId != null) {
-                    requireNotNull(device) { "autoRecorded(clientRecordId..) requires deviceType" }
-                    Metadata.autoRecorded(clientRecordId, clientRecordVersion, device)
-                } else {
-                    requireNotNull(device) { "autoRecorded(device) requires deviceType" }
-                    Metadata.autoRecorded(device)
-                }
-            }
-
-            "unknown", "unknown_recording_method" -> {
-                if (fixedId != null) {
-                    Metadata.unknownRecordingMethodWithId(id = fixedId, device = device)
-                } else if (clientRecordId != null) {
-                    Metadata.unknownRecordingMethod(clientRecordId, clientRecordVersion, device)
-                } else {
-                    Metadata.unknownRecordingMethod(device)
-                }
-            }
-
-            "manual", "manual_entry" -> {
-                if (fixedId != null) {
-                    Metadata.manualEntryWithId(id = fixedId, device = device)
-                } else if (clientRecordId != null) {
-                    Metadata.manualEntry(clientRecordId, clientRecordVersion, device)
-                } else {
-                    Metadata.manualEntry(device)
-                }
-            }
-
-            else -> error("Unknown metadata.method: $method")
         }
     }
 
