@@ -768,6 +768,13 @@
     <string name="text_paste">粘贴</string>
     <string name="text_path_is_empty">路径为空</string>
     <string name="text_pc_server_address">PC 服务端地址</string>
+    <string name="text_permission_desc_inject_events">允许应用注入用户输入事件（需要系统级权限）。</string>
+    <string name="text_permission_desc_read_frame_buffer">允许应用读取帧缓冲区的内容（屏幕捕获）。</string>
+    <string name="text_permission_desc_health_read_health_data_in_background">允许应用在后台读取所有类型的健康数据。</string>
+    <string name="text_permission_desc_health_read_health_data_history">允许应用读取所有类型的以往健康数据。</string>
+    <string name="text_permission_desc_health_write_medical_data">允许应用写入医疗记录数据。</string>
+    <string name="text_permission_desc_health_read_sleep">允许应用读取睡眠数据。</string>
+    <string name="text_permission_desc_health_write_sleep">允许应用写入睡眠数据。</string>
     <string name="text_permission_desc_access_coarse_location">允许应用通过网络访问粗略的位置信息</string>
     <string name="text_permission_desc_access_fine_location">允许应用通过 GPS 获取精确的位置信息</string>
     <string name="text_permission_desc_access_location_extra_commands">允许应用访问位置提供者的额外命令</string>
