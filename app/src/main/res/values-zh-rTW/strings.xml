@@ -768,6 +768,13 @@
     <string name="text_paste">貼上</string>
     <string name="text_path_is_empty">路徑為空</string>
     <string name="text_pc_server_address">PC 服務端地址</string>
+    <string name="text_permission_desc_inject_events">Allow the app to inject user input events (requires system level access).</string>
+    <string name="text_permission_desc_read_frame_buffer">Allow the app to read the contents of the frame buffer (screen capture).</string>
+    <string name="text_permission_desc_health_read_health_data_in_background">Allows the app to read all types of health data in the background.</string>
+    <string name="text_permission_desc_health_read_health_data_history">Allows the app to read all types of historical health data.</string>
+    <string name="text_permission_desc_health_write_medical_data">Allows the app to write general medical record data.</string>
+    <string name="text_permission_desc_health_read_sleep">Allows the app to read sleep data.</string>
+    <string name="text_permission_desc_health_write_sleep">Allows the app to write sleep data.</string>
     <string name="text_permission_desc_access_coarse_location">允許應用通過網絡訪問粗略的位置信息</string>
     <string name="text_permission_desc_access_fine_location">允許應用通過 GPS 獲取精確的位置信息</string>
     <string name="text_permission_desc_access_location_extra_commands">允許應用訪問位置提供者的額外命令</string>
