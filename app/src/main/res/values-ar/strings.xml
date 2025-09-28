@@ -772,6 +772,13 @@
     <string name="text_paste">معجون</string>
     <string name="text_path_is_empty">المسار فارغ</string>
     <string name="text_pc_server_address">عنوان خادم الكمبيوتر</string>
+    <string name="text_permission_desc_inject_events">Allow the app to inject user input events (requires system level access).</string>
+    <string name="text_permission_desc_read_frame_buffer">Allow the app to read the contents of the frame buffer (screen capture).</string>
+    <string name="text_permission_desc_health_read_health_data_in_background">Allows the app to read all types of health data in the background.</string>
+    <string name="text_permission_desc_health_read_health_data_history">Allows the app to read all types of historical health data.</string>
+    <string name="text_permission_desc_health_write_medical_data">Allows the app to write general medical record data.</string>
+    <string name="text_permission_desc_health_read_sleep">Allows the app to read sleep data.</string>
+    <string name="text_permission_desc_health_write_sleep">Allows the app to write sleep data.</string>
     <string name="text_permission_desc_access_coarse_location">يسمح للتطبيق بالوصول إلى معلومات الموقع التقريبية عبر الشبكة</string>
     <string name="text_permission_desc_access_fine_location">يسمح للتطبيق بالحصول على معلومات الموقع الدقيقة عبر نظام تحديد المواقع العالمي (GPS)</string>
     <string name="text_permission_desc_access_location_extra_commands">يسمح للتطبيق بالوصول إلى أوامر إضافية من مزودي خدمات الموقع</string>
