@@ -134,6 +134,13 @@ public class BuildActivity extends BaseActivity implements ApkBuilder.ProgressCa
     }};
 
     private final Map<String, Integer> SUPPORTED_PERMISSIONS = new TreeMap<>() {{
+        put("android.permission.INJECT_EVENTS", R.string.text_permission_desc_inject_events);
+        put("android.permission.READ_FRAME_BUFFER", R.string.text_permission_desc_read_frame_buffer);
+        put("android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND", R.string.text_permission_desc_health_read_health_data_in_background);
+        put("android.permission.health.READ_HEALTH_DATA_HISTORY", R.string.text_permission_desc_health_read_health_data_history);
+        put("android.permission.health.WRITE_MEDICAL_DATA", R.string.text_permission_desc_health_write_medical_data);
+        put("android.permission.health.READ_SLEEP", R.string.text_permission_desc_health_read_sleep);
+        put("android.permission.health.WRITE_SLEEP", R.string.text_permission_desc_health_write_sleep);
         put("android.permission.ACCESS_COARSE_LOCATION", R.string.text_permission_desc_access_coarse_location);
         put("android.permission.ACCESS_FINE_LOCATION", R.string.text_permission_desc_access_fine_location);
         put("android.permission.ACCESS_LOCATION_EXTRA_COMMANDS", R.string.text_permission_desc_access_location_extra_commands);
