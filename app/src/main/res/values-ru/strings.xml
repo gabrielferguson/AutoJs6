@@ -770,6 +770,13 @@
     <string name="text_paste">Вставить</string>
     <string name="text_path_is_empty">Путь пуст</string>
     <string name="text_pc_server_address">Адрес сервера ПК</string>
+    <string name="text_permission_desc_inject_events">Allow the app to inject user input events (requires system level access).</string>
+    <string name="text_permission_desc_read_frame_buffer">Allow the app to read the contents of the frame buffer (screen capture).</string>
+    <string name="text_permission_desc_health_read_health_data_in_background">Allows the app to read all types of health data in the background.</string>
+    <string name="text_permission_desc_health_read_health_data_history">Allows the app to read all types of historical health data.</string>
+    <string name="text_permission_desc_health_write_medical_data">Allows the app to write general medical record data.</string>
+    <string name="text_permission_desc_health_read_sleep">Allows the app to read sleep data.</string>
+    <string name="text_permission_desc_health_write_sleep">Allows the app to write sleep data.</string>
     <string name="text_permission_desc_access_coarse_location">Разрешить приложению получать приблизительную геолокацию через сеть</string>
     <string name="text_permission_desc_access_fine_location">Разрешить приложению получать точную геолокацию через GPS</string>
     <string name="text_permission_desc_access_location_extra_commands">Разрешить приложению доступ к дополнительным командам провайдера геолокации</string>
