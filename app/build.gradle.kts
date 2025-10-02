@@ -246,6 +246,9 @@ dependencies /* Unclassified */ {
 
     // ICU4J
     implementation("com.ibm.icu:icu4j:77.1")
+
+    // SQLCipher
+    implementation("net.zetetic:sqlcipher-android:4.6.0@aar")
 }
 
 dependencies /* MIME */ {
