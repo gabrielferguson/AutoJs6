@@ -1,13 +1,18 @@
 package org.autojs.autojs.core.database
 
-class Transaction(val database: Database) {
+open class Transaction(val database: Any) {
 
     fun end() {
-        database.endTransaction()
+        when (database) {
+            is Database -> database.endTransaction()
+            is DatabaseCipher -> database.endTransaction()
+        }
     }
 
     fun succeed() {
-        database.setTransactionSuccessful()
+        when (database) {
+            is Database -> database.setTransactionSuccessful()
+            is DatabaseCipher -> database.setTransactionSuccessful()
+        }
     }
-
 }
