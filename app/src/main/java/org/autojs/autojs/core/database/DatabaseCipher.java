@@ -8,7 +8,6 @@ import android.util.Pair;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import net.zetetic.database.sqlcipher.SQLiteDatabase;
-import net.zetetic.database.sqlcipher.SQLiteOpenHelper;
 import net.zetetic.database.sqlcipher.SQLiteStatement;
 import net.zetetic.database.sqlcipher.SQLiteTransactionListener;
 import net.zetetic.database.DatabaseErrorHandler;
@@ -19,60 +18,62 @@ import java.io.Closeable;
 import java.util.List;
 import java.util.Locale;
 
-public class DatabaseCipher extends SQLiteOpenHelper implements Closeable {
+public class DatabaseCipher implements Closeable {
 
     private final DatabaseCallback mCallback;
     private SQLiteDatabase mDatabase;
     private final ScriptRuntime mScriptRuntime;
     private final TypeAdapter mTypeAdapter;
     private final byte[] mPassword;
+    private final String mDatabasePath;
+    private final int mVersion;
 
     public DatabaseCipher(@NonNull Context context, @NonNull ScriptRuntime scriptRuntime, @NonNull String name, int version, @NonNull String password, boolean readable, @Nullable DatabaseCallback databaseCallback, @Nullable TypeAdapter typeAdapter) {
-        // 使用最简单的构造函数：(Context context, String name, CursorFactory factory, int version)
-        super(context, scriptRuntime.files.nonNullPath(name), null, version);
-        
         mTypeAdapter = typeAdapter;
         mCallback = databaseCallback;
         mScriptRuntime = scriptRuntime;
         mPassword = password.getBytes(); // 转换为 byte[]
+        mDatabasePath = scriptRuntime.files.nonNullPath(name);
+        mVersion = version;
         
         // 加载 SQLCipher 库
         System.loadLibrary("sqlcipher");
         
         // 使用密码打开数据库
-        mDatabase = readable ? 
-            getReadableDatabase(mPassword) : 
-            getWritableDatabase(mPassword);
+        int flags = readable ? SQLiteDatabase.OPEN_READONLY : 
+                              (SQLiteDatabase.OPEN_READWRITE | SQLiteDatabase.OPEN_CREATE);
+        
+        DatabaseErrorHandler errorHandler = databaseCallback != null ? 
+            new DatabaseCipherErrorHandlerWrapper(databaseCallback) : null;
+        
+        mDatabase = SQLiteDatabase.openDatabase(
+            mDatabasePath, 
+            mPassword, 
+            null, 
+            flags, 
+            null, 
+            errorHandler
+        );
+        
+        // 设置数据库版本并触发回调
+        int currentVersion = mDatabase.getVersion();
+        if (currentVersion == 0) {
+            mDatabase.setVersion(version);
+            if (mCallback != null) {
+                mCallback.onCreate(this);
+            }
+        } else if (currentVersion < version) {
+            if (mCallback != null) {
+                mCallback.onUpgrade(this, currentVersion, version);
+            }
+            mDatabase.setVersion(version);
+        }
+        
+        if (mCallback != null) {
+            mCallback.onOpen(this);
+        }
 
         scriptRuntime.closeableManager.add(this);
-    }
-
-    // 重写这两个方法以支持密码参数
-    public SQLiteDatabase getReadableDatabase(byte[] password) {
-        return SQLiteDatabase.openDatabase(
-            getDatabaseName(), 
-            password, 
-            null, 
-            SQLiteDatabase.OPEN_READONLY, 
-            null, 
-            null
-        );
-    }
-
-    public SQLiteDatabase getWritableDatabase(byte[] password) {
-        return SQLiteDatabase.openDatabase(
-            getDatabaseName(), 
-            password, 
-            null, 
-            SQLiteDatabase.OPEN_READWRITE | SQLiteDatabase.OPEN_CREATE, 
-            null, 
-            null
-        );
-    }
-
-    // 获取完整数据库路径
-    private String getDatabaseName() {
-        return mScriptRuntime.files.nonNullPath(mDatabase != null ? mDatabase.getPath() : "database.db");
     }
 
     private ContentValues toContentValues(Object object) {
@@ -246,30 +247,6 @@ public class DatabaseCipher extends SQLiteOpenHelper implements Closeable {
 
     public boolean needUpgrade(int newVersion) {
         return mDatabase.needUpgrade(newVersion);
-    }
-
-    @Override
-    public void onCreate(SQLiteDatabase db) {
-        mDatabase = db;
-        if (mCallback != null) {
-            mCallback.onCreate(this);
-        }
-    }
-
-    @Override
-    public void onOpen(SQLiteDatabase db) {
-        mDatabase = db;
-        if (mCallback != null) {
-            mCallback.onOpen(this);
-        }
-    }
-
-    @Override
-    public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        mDatabase = db;
-        if (mCallback != null) {
-            mCallback.onUpgrade(this, oldVersion, newVersion);
-        }
     }
 
     public Object query(String table, String[] columns, String selection, String[] selectionArgs, String groupBy, String having, String orderBy) {
