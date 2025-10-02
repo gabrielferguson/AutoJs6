@@ -8,72 +8,70 @@ import android.util.Pair;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import net.zetetic.database.sqlcipher.SQLiteDatabase;
+import net.zetetic.database.sqlcipher.SQLiteOpenHelper;
 import net.zetetic.database.sqlcipher.SQLiteStatement;
 import net.zetetic.database.sqlcipher.SQLiteTransactionListener;
-import net.zetetic.database.DatabaseErrorHandler;
 import org.autojs.autojs.core.eventloop.EventEmitter;
 import org.autojs.autojs.runtime.ScriptRuntime;
 
 import java.io.Closeable;
+import java.io.File;
 import java.util.List;
 import java.util.Locale;
 
-public class DatabaseCipher implements Closeable {
+public class DatabaseCipher extends SQLiteOpenHelper implements Closeable {
 
     private final DatabaseCallback mCallback;
     private SQLiteDatabase mDatabase;
     private final ScriptRuntime mScriptRuntime;
     private final TypeAdapter mTypeAdapter;
-    private final byte[] mPassword;
+    private final String mPassword;
     private final String mDatabasePath;
-    private final int mVersion;
 
     public DatabaseCipher(@NonNull Context context, @NonNull ScriptRuntime scriptRuntime, @NonNull String name, int version, @NonNull String password, boolean readable, @Nullable DatabaseCallback databaseCallback, @Nullable TypeAdapter typeAdapter) {
+        super(context, scriptRuntime.files.nonNullPath(name), null, version);
         mTypeAdapter = typeAdapter;
         mCallback = databaseCallback;
         mScriptRuntime = scriptRuntime;
-        mPassword = password.getBytes(); // 转换为 byte[]
+        mPassword = password;
         mDatabasePath = scriptRuntime.files.nonNullPath(name);
-        mVersion = version;
         
         // 加载 SQLCipher 库
         System.loadLibrary("sqlcipher");
         
-        // 使用密码打开数据库
-        int flags = readable ? SQLiteDatabase.OPEN_READONLY : 
-                              (SQLiteDatabase.OPEN_READWRITE | SQLiteDatabase.OPEN_CREATE);
+        // 使用正确的 API 打开数据库
+        File dbFile = context.getDatabasePath(mDatabasePath);
+        byte[] passwordBytes = password.getBytes();
         
-        DatabaseErrorHandler errorHandler = databaseCallback != null ? 
-            new DatabaseCipherErrorHandlerWrapper(databaseCallback) : null;
+        // 正确的方法签名：path, password, factory, flags, databaseHook
+        int flags = readable ? SQLiteDatabase.OPEN_READONLY : 
+                    (SQLiteDatabase.OPEN_READWRITE | SQLiteDatabase.CREATE_IF_NECESSARY);
         
         mDatabase = SQLiteDatabase.openDatabase(
-            mDatabasePath, 
-            mPassword, 
+            dbFile.getAbsolutePath(), 
+            passwordBytes, 
             null, 
             flags, 
-            null, 
-            errorHandler
+            null  // SQLiteDatabaseHook，不是 DatabaseErrorHandler
         );
         
-        // 设置数据库版本并触发回调
+        // 手动处理数据库版本
         int currentVersion = mDatabase.getVersion();
         if (currentVersion == 0) {
             mDatabase.setVersion(version);
-            if (mCallback != null) {
-                mCallback.onCreate(this);
-            }
+            onCreate(mDatabase);
         } else if (currentVersion < version) {
-            if (mCallback != null) {
-                mCallback.onUpgrade(this, currentVersion, version);
-            }
+            onUpgrade(mDatabase, currentVersion, version);
             mDatabase.setVersion(version);
         }
-        
-        if (mCallback != null) {
-            mCallback.onOpen(this);
-        }
+        onOpen(mDatabase);
 
         scriptRuntime.closeableManager.add(this);
+    }
+
+    @Override
+    public String getDatabaseName() {
+        return mDatabasePath;
     }
 
     private ContentValues toContentValues(Object object) {
@@ -149,7 +147,9 @@ public class DatabaseCipher implements Closeable {
 
     @Override
     public void close() {
-        mDatabase.close();
+        if (mDatabase != null && mDatabase.isOpen()) {
+            mDatabase.close();
+        }
         mScriptRuntime.closeableManager.remove(this);
     }
 
@@ -249,6 +249,30 @@ public class DatabaseCipher implements Closeable {
         return mDatabase.needUpgrade(newVersion);
     }
 
+    @Override
+    public void onCreate(SQLiteDatabase db) {
+        mDatabase = db;
+        if (mCallback != null) {
+            mCallback.onCreate(this);
+        }
+    }
+
+    @Override
+    public void onOpen(SQLiteDatabase db) {
+        mDatabase = db;
+        if (mCallback != null) {
+            mCallback.onOpen(this);
+        }
+    }
+
+    @Override
+    public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        mDatabase = db;
+        if (mCallback != null) {
+            mCallback.onUpgrade(this, oldVersion, newVersion);
+        }
+    }
+    
     public Object query(String table, String[] columns, String selection, String[] selectionArgs, String groupBy, String having, String orderBy) {
         return wrapCursor(mDatabase.query(table, columns, selection, selectionArgs, groupBy, having, orderBy));
     }
