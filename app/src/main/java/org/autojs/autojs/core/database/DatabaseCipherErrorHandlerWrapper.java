@@ -14,7 +14,7 @@ public final class DatabaseCipherErrorHandlerWrapper implements DatabaseErrorHan
 
     @Override
     public void onCorruption(SQLiteDatabase sqLiteDatabase, SQLiteException exception) {
-        // 现在使用正确的 SQLCipher DatabaseErrorHandler 接口
+        // 使用 SQLCipher 的正确接口签名
         if (mCallback != null) {
             mCallback.onCorruption(sqLiteDatabase);
         }
