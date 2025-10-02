@@ -249,7 +249,7 @@ dependencies /* Unclassified */ {
 
     // SQLCipher
     implementation("net.zetetic:sqlcipher-android:4.7.1@aar")
-    implementation("androidx.sqlite:sqlite:2.5.2")
+    implementation("androidx.sqlite:sqlite:2.6.0")
 }
 
 dependencies /* MIME */ {
