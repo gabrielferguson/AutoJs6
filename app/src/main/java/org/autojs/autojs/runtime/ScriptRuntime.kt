@@ -81,6 +81,7 @@ import org.autojs.autojs.runtime.api.augment.sensors.Sensors
 import org.autojs.autojs.runtime.api.augment.shell.Shell
 import org.autojs.autojs.runtime.api.augment.shizuku.Shizuku
 import org.autojs.autojs.runtime.api.augment.sqlite.SQLite
+import org.autojs.autojs.runtime.api.augment.sqlcipher.SQLCipher
 import org.autojs.autojs.runtime.api.augment.storages.Storages
 import org.autojs.autojs.runtime.api.augment.sysprops.SysProps
 import org.autojs.autojs.runtime.api.augment.tasks.Tasks
@@ -150,6 +151,7 @@ import org.autojs.autojs.runtime.api.OcrRapid as ApiOcrRapid
 import org.autojs.autojs.runtime.api.Plugins as ApiPlugins
 import org.autojs.autojs.runtime.api.Recorder as ApiRecorder
 import org.autojs.autojs.runtime.api.SQLite as ApiSQLite
+import org.autojs.autojs.runtime.api.SQLCipher as ApiSQLCipher
 import org.autojs.autojs.runtime.api.Scale as ApiScale
 import org.autojs.autojs.runtime.api.Sensors as ApiSensors
 import org.autojs.autojs.runtime.api.Threads as ApiThreads
@@ -350,6 +352,10 @@ class ScriptRuntime private constructor(builder: Builder) {
 
     @JvmField
     @ScriptVariable
+    val sqlcipher: ApiSQLCipher
+
+    @JvmField
+    @ScriptVariable
     val healthConnect: HealthConnect
 
     @JvmField
@@ -453,6 +459,7 @@ class ScriptRuntime private constructor(builder: Builder) {
         device = ApiDevice(mUiHandlerAppContext)
         media = ApiMedia(mUiHandlerAppContext, this)
         sqlite = ApiSQLite(mUiHandlerAppContext, this)
+        sqlcipher = ApiSQLCipher(mUiHandlerAppContext, this)
 
         http = ApiHttp()
         ocrMLKit = ApiOcrMLKit()
@@ -772,6 +779,7 @@ class ScriptRuntime private constructor(builder: Builder) {
         Mime(this).augment(target, mime, true)
         SysProps(this).augment(target, true)
         SQLite(this).augment(target, true)
+        SQLCipher(this).augment(target, true)
         NanoID.augment(target, true)
         Pinyin.augment(target, true)
         Pinyin4j.augment(target, true)
