@@ -4,6 +4,13 @@
 
 ******
 
+# v6.6.5
+
+###### 2025/06/01
+
+* `Feature` sqlcipher module for encrypted SQLite database operations (based on SQLCipher-Android v4.6.0) (see Sample Code > Database)
+* `Dependency` Added SQLCipher Android version 4.6.0
+
 # v6.6.4
 
 ###### 2025/05/31
