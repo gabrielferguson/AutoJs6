@@ -27,18 +27,21 @@ public class DatabaseCipher extends SQLiteOpenHelper implements Closeable {
     private final String mPassword;
 
     public DatabaseCipher(@NonNull Context context, @NonNull ScriptRuntime scriptRuntime, @NonNull String name, int version, @NonNull String password, boolean readable, @Nullable DatabaseCallback databaseCallback, @Nullable TypeAdapter typeAdapter) {
-        // 修复1: 使用 SQLCipher 的 DatabaseErrorHandler 接口
-        super(context, scriptRuntime.files.nonNullPath(name), null, null, version, 0, databaseCallback == null ? null : new DatabaseCipherErrorHandlerWrapper(databaseCallback));
+        // 修复1: 使用正确的 SQLCipher SQLiteOpenHelper 构造函数
+        // 参数: Context, name, password(byte[] or String), CursorFactory, version, minVersion, errorHandler, hook, enableWriteAheadLogging
+        super(context, scriptRuntime.files.nonNullPath(name), password.toCharArray(), null, version, 0, 
+            databaseCallback == null ? null : new DatabaseCipherErrorHandlerWrapper(databaseCallback), null);
+        
         mTypeAdapter = typeAdapter;
         mCallback = databaseCallback;
         mScriptRuntime = scriptRuntime;
         mPassword = password;
         
-        // 修复2: 使用正确的方式初始化 SQLCipher
-        SQLiteDatabase.loadLibs(context);
+        // 修复2: 使用正确的方式加载 SQLCipher 库
+        System.loadLibrary("sqlcipher");
         
-        // 修复3: 传递密码参数给 getReadableDatabase/getWritableDatabase
-        mDatabase = readable ? getReadableDatabase(mPassword) : getWritableDatabase(mPassword);
+        // 修复3: 不需要传递密码，已经在构造函数中设置
+        mDatabase = readable ? getReadableDatabase() : getWritableDatabase();
         scriptRuntime.closeableManager.add(this);
     }
 
@@ -50,8 +53,8 @@ public class DatabaseCipher extends SQLiteOpenHelper implements Closeable {
     }
 
     private void transactionInternal(TransactionCallback transactionCallback, EventEmitter eventEmitter, boolean exclusive) {
-        // 修复4: 创建 Transaction 对象，传递 SQLiteDatabase 而不是 this
-        Transaction transaction = new Transaction(mDatabase);
+        // 修复4: 使用 DatabaseCipherTransactionWrapper 来适配类型
+        DatabaseCipherTransactionWrapper transaction = new DatabaseCipherTransactionWrapper(this);
         SQLiteTransactionListener listener = new SQLiteTransactionListener() {
             @Override
             public void onBegin() {
@@ -351,23 +354,14 @@ public class DatabaseCipher extends SQLiteOpenHelper implements Closeable {
     }
 
     public interface DatabaseCallback {
-
         void onCorruption(SQLiteDatabase db);
-
         void onCreate(DatabaseCipher database);
-
         void onOpen(DatabaseCipher database);
-
         void onUpgrade(DatabaseCipher database, int oldVersion, int newVersion);
-
     }
 
     public interface TypeAdapter {
-
         ContentValues toContentValues(Object obj);
-
         Object wrapCursor(Cursor cursor);
-
     }
-
 }
