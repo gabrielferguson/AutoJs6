@@ -11,6 +11,7 @@ import net.zetetic.database.sqlcipher.SQLiteDatabase;
 import net.zetetic.database.sqlcipher.SQLiteOpenHelper;
 import net.zetetic.database.sqlcipher.SQLiteStatement;
 import net.zetetic.database.sqlcipher.SQLiteTransactionListener;
+import net.zetetic.database.DatabaseErrorHandler;
 import org.autojs.autojs.core.eventloop.EventEmitter;
 import org.autojs.autojs.runtime.ScriptRuntime;
 
@@ -24,25 +25,54 @@ public class DatabaseCipher extends SQLiteOpenHelper implements Closeable {
     private SQLiteDatabase mDatabase;
     private final ScriptRuntime mScriptRuntime;
     private final TypeAdapter mTypeAdapter;
-    private final char[] mPassword;
+    private final byte[] mPassword;
 
     public DatabaseCipher(@NonNull Context context, @NonNull ScriptRuntime scriptRuntime, @NonNull String name, int version, @NonNull String password, boolean readable, @Nullable DatabaseCallback databaseCallback, @Nullable TypeAdapter typeAdapter) {
-        // 修复1: 使用正确的 SQLCipher SQLiteOpenHelper 构造函数
-        // 构造函数签名: (Context, String name, char[] password, CursorFactory, int version, int minVersion, DatabaseErrorHandler, SQLiteDatabaseHook)
-        super(context, scriptRuntime.files.nonNullPath(name), password.toCharArray(), null, version, 0, 
-            databaseCallback == null ? null : new DatabaseCipherErrorHandlerWrapper(databaseCallback), null);
+        // 使用最简单的构造函数：(Context context, String name, CursorFactory factory, int version)
+        super(context, scriptRuntime.files.nonNullPath(name), null, version);
         
         mTypeAdapter = typeAdapter;
         mCallback = databaseCallback;
         mScriptRuntime = scriptRuntime;
-        mPassword = password.toCharArray();
+        mPassword = password.getBytes(); // 转换为 byte[]
         
-        // 修复2: 使用正确的方式加载 SQLCipher 库
+        // 加载 SQLCipher 库
         System.loadLibrary("sqlcipher");
         
-        // 修复3: 密码已在构造函数中设置，无需再传参数
-        mDatabase = readable ? getReadableDatabase() : getWritableDatabase();
+        // 使用密码打开数据库
+        mDatabase = readable ? 
+            getReadableDatabase(mPassword) : 
+            getWritableDatabase(mPassword);
+
         scriptRuntime.closeableManager.add(this);
+    }
+
+    // 重写这两个方法以支持密码参数
+    public SQLiteDatabase getReadableDatabase(byte[] password) {
+        return SQLiteDatabase.openDatabase(
+            getDatabaseName(), 
+            password, 
+            null, 
+            SQLiteDatabase.OPEN_READONLY, 
+            null, 
+            null
+        );
+    }
+
+    public SQLiteDatabase getWritableDatabase(byte[] password) {
+        return SQLiteDatabase.openDatabase(
+            getDatabaseName(), 
+            password, 
+            null, 
+            SQLiteDatabase.OPEN_READWRITE | SQLiteDatabase.OPEN_CREATE, 
+            null, 
+            null
+        );
+    }
+
+    // 获取完整数据库路径
+    private String getDatabaseName() {
+        return mScriptRuntime.files.nonNullPath(mDatabase != null ? mDatabase.getPath() : "database.db");
     }
 
     private ContentValues toContentValues(Object object) {
@@ -53,7 +83,6 @@ public class DatabaseCipher extends SQLiteOpenHelper implements Closeable {
     }
 
     private void transactionInternal(TransactionCallback transactionCallback, EventEmitter eventEmitter, boolean exclusive) {
-        // 修复4: Transaction 传递 this (DatabaseCipher) 而不是 mDatabase
         Transaction transaction = new Transaction(this);
         SQLiteTransactionListener listener = new SQLiteTransactionListener() {
             @Override
