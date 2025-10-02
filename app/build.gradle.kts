@@ -248,7 +248,8 @@ dependencies /* Unclassified */ {
     implementation("com.ibm.icu:icu4j:77.1")
 
     // SQLCipher
-    implementation("net.zetetic:sqlcipher-android:4.6.0@aar")
+    implementation("net.zetetic:sqlcipher-android:4.7.1@aar")
+    implementation("androidx.sqlite:sqlite:2.5.2")
 }
 
 dependencies /* MIME */ {
