@@ -26,13 +26,18 @@ public class DatabaseCipher extends SQLiteOpenHelper implements Closeable {
     private final TypeAdapter mTypeAdapter;
     private final String mPassword;
 
-    public DatabaseCipher(@NonNull Context context, @NonNull ScriptRuntime scriptRuntime, @NonNull String name, int version, @NonNull String password, boolean readable, @Nullable DatabaseCallback databaseCallback, @NonNull TypeAdapter typeAdapter) {
-        super(context, scriptRuntime.files.nonNullPath(name), null, version, databaseCallback == null ? null : new DatabaseCipherErrorHandlerWrapper(databaseCallback));
+    public DatabaseCipher(@NonNull Context context, @NonNull ScriptRuntime scriptRuntime, @NonNull String name, int version, @NonNull String password, boolean readable, @Nullable DatabaseCallback databaseCallback, @Nullable TypeAdapter typeAdapter) {
+        // 修复1: 使用 SQLCipher 的 DatabaseErrorHandler 接口
+        super(context, scriptRuntime.files.nonNullPath(name), null, null, version, 0, databaseCallback == null ? null : new DatabaseCipherErrorHandlerWrapper(databaseCallback));
         mTypeAdapter = typeAdapter;
         mCallback = databaseCallback;
         mScriptRuntime = scriptRuntime;
         mPassword = password;
+        
+        // 修复2: 使用正确的方式初始化 SQLCipher
         SQLiteDatabase.loadLibs(context);
+        
+        // 修复3: 传递密码参数给 getReadableDatabase/getWritableDatabase
         mDatabase = readable ? getReadableDatabase(mPassword) : getWritableDatabase(mPassword);
         scriptRuntime.closeableManager.add(this);
     }
@@ -45,7 +50,8 @@ public class DatabaseCipher extends SQLiteOpenHelper implements Closeable {
     }
 
     private void transactionInternal(TransactionCallback transactionCallback, EventEmitter eventEmitter, boolean exclusive) {
-        Transaction transaction = new Transaction(this);
+        // 修复4: 创建 Transaction 对象，传递 SQLiteDatabase 而不是 this
+        Transaction transaction = new Transaction(mDatabase);
         SQLiteTransactionListener listener = new SQLiteTransactionListener() {
             @Override
             public void onBegin() {
