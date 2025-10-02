@@ -39,21 +39,28 @@ public class DatabaseCipher extends SQLiteOpenHelper implements Closeable {
         // 加载 SQLCipher 库
         System.loadLibrary("sqlcipher");
         
-        // 使用正确的 API 打开数据库
+        // 使用 openOrCreateDatabase 方法（支持 password 和 errorHandler）
         File dbFile = context.getDatabasePath(mDatabasePath);
-        byte[] passwordBytes = password.getBytes();
         
-        // 正确的方法签名：path, password, factory, flags, databaseHook
-        int flags = readable ? SQLiteDatabase.OPEN_READONLY : 
-                    (SQLiteDatabase.OPEN_READWRITE | SQLiteDatabase.CREATE_IF_NECESSARY);
-        
-        mDatabase = SQLiteDatabase.openDatabase(
-            dbFile.getAbsolutePath(), 
-            passwordBytes, 
-            null, 
-            flags, 
-            null  // SQLiteDatabaseHook，不是 DatabaseErrorHandler
-        );
+        if (readable) {
+            // 只读模式
+            mDatabase = SQLiteDatabase.openDatabase(
+                dbFile.getAbsolutePath(),
+                password,
+                null,
+                SQLiteDatabase.OPEN_READONLY,
+                null
+            );
+        } else {
+            // 读写模式，使用 openOrCreateDatabase
+            mDatabase = SQLiteDatabase.openOrCreateDatabase(
+                dbFile.getAbsolutePath(),
+                password,
+                null,
+                databaseCallback == null ? null : new DatabaseCipherErrorHandlerWrapper(databaseCallback),
+                null
+            );
+        }
         
         // 手动处理数据库版本
         int currentVersion = mDatabase.getVersion();
