@@ -2,7 +2,6 @@ package org.autojs.autojs.core.database;
 
 import net.zetetic.database.DatabaseErrorHandler;
 import net.zetetic.database.sqlcipher.SQLiteDatabase;
-import net.zetetic.database.sqlcipher.SQLiteException;
 
 public final class DatabaseCipherErrorHandlerWrapper implements DatabaseErrorHandler {
 
@@ -13,8 +12,8 @@ public final class DatabaseCipherErrorHandlerWrapper implements DatabaseErrorHan
     }
 
     @Override
-    public void onCorruption(SQLiteDatabase sqLiteDatabase, SQLiteException exception) {
-        // 使用 SQLCipher 的正确接口签名
+    public void onCorruption(SQLiteDatabase sqLiteDatabase) {
+        // 只有一个参数，不需要 SQLiteException
         if (mCallback != null) {
             mCallback.onCorruption(sqLiteDatabase);
         }
