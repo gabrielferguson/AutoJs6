@@ -100,10 +100,8 @@ class SQLCipher(private val context: Context, private val scriptRuntime: ScriptR
     }
 
     companion object {
-
-        const val DEFAULT_VERSION = 1
+        const val DEFAULT_VERSION = 4
         const val DEFAULT_READ_ONLY = false
-
     }
 
 }
